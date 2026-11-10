@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Munshi AI — Sleek Kiryana ERP</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230F172A'/%3E%3Cpath d='M17 46V22L32 38' fill='none' stroke='%23F8FAFC' stroke-width='5.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M32 38L47 22V46' fill='none' stroke='%2310B981' stroke-width='5.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M47 21C47 14 52 11 57 11C57 17.5 53 21 47 21Z' fill='%2334D399'/%3E%3C/svg%3E">
+    <meta name="theme-color" content="#0F172A">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -26,31 +28,26 @@
          GLOBAL HEADER
          ========================================== -->
     <header class="px-6 pt-10 pb-4 flex justify-between items-center sticky top-0 z-30 glass-header">
-        <div>
-            <div class="flex items-center gap-2">
-                <p class="text-xs text-slate-500 font-medium tracking-wide uppercase" id="header-subtitle">Madina Kiryana</p>
-                <button onclick="toggleSyncMode()" id="sync-badge"
-                    class="flex items-center gap-1.5 bg-white border border-slate-200/80 px-2 py-0.5 rounded-full shadow-xs active:scale-95 transition-all">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" id="sync-dot"></span>
-                    <span class="text-[10px] font-semibold text-slate-600" id="sync-text">Synced</span>
-                </button>
-            </div>
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 mt-0.5" id="header-title">Haji Tariq</h1>
-        </div>
-        <div class="flex items-center gap-2.5">
-            <button onclick="switchTab('reports')" id="header-reports-btn"
-                class="w-10 h-10 rounded-full bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 hover:text-slate-900 shadow-xs active:scale-95 transition-all"
-                title="Karobari Reports">
-                <span class="material-symbols-outlined text-[20px]">insights</span>
-            </button>
-            <button onclick="openProfileModal()" class="relative group active:scale-95 transition-transform">
-                <div class="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-semibold text-sm shadow-sm overflow-hidden">
-                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBSacKmfhpn0yieXF2BPgm_tCf-SPpceqJjBvJS8Cnt_iNVlscAQ5ntC4J8FkJycsmiWVdpO52TDLqkeLpM6bnEIeIDUs3aXRwn6PGtM55_GKoECLgiELROGcv3qTKeGHuvp8_-EfFf-o81kDMuncqBoCZeaKhx7eFJF4uTtkFEhdqoglkUk6z_9oXckYKHa_V_L_O5cOiSxoc_Mi36qcS7mpJLy88Jk7B1kyEG_iQm"
-                        onerror="this.style.display='none'; this.parentElement.innerText='HT'"
-                        class="w-full h-full object-cover" alt="Haji Tariq">
+        <div class="flex items-center gap-3">
+            <!-- Munshi mark -->
+            <svg class="w-10 h-10 shrink-0" viewBox="0 0 64 64" role="img" aria-label="Munshi">
+                <rect width="64" height="64" rx="16" fill="#0F172A"/>
+                <path d="M17 46V22L32 38" fill="none" stroke="#F8FAFC" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M32 38L47 22V46" fill="none" stroke="#10B981" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M47 21C47 14 52 11 57 11C57 17.5 53 21 47 21Z" fill="#34D399"/>
+                <path d="M20 54H44" stroke="#334155" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <div>
+                <div class="flex items-center gap-2">
+                    <p class="text-xs text-slate-500 font-medium tracking-wide uppercase" id="header-subtitle">Madina Kiryana</p>
+                    <button onclick="toggleSyncMode()" id="sync-badge"
+                        class="flex items-center gap-1.5 bg-white border border-slate-200/80 px-2 py-0.5 rounded-full shadow-xs active:scale-95 transition-all">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" id="sync-dot"></span>
+                        <span class="text-[10px] font-semibold text-slate-600" id="sync-text">Synced</span>
+                    </button>
                 </div>
-                <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#FAFAFA] rounded-full"></div>
-            </button>
+                <h1 class="text-2xl font-semibold tracking-tight text-slate-900 mt-0.5" id="header-title">Haji Tariq</h1>
+            </div>
         </div>
     </header>
 
