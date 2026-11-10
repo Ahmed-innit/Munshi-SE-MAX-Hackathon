@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Munshi AI — Sleek Kiryana ERP</title>
+    
+    <!-- Vector Favicon (Embedded Data URI) -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230F172A'/%3E%3Cpath d='M17 46V22L32 38' fill='none' stroke='%23F8FAFC' stroke-width='5.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M32 38L47 22V46' fill='none' stroke='%2310B981' stroke-width='5.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M47 21C47 14 52 11 57 11C57 17.5 53 21 47 21Z' fill='%2334D399'/%3E%3C/svg%3E">
     <meta name="theme-color" content="#0F172A">
 
@@ -25,40 +27,46 @@
 <div class="max-w-md mx-auto min-h-screen bg-[#FAFAFA] relative shadow-2xl border-x border-slate-200/60 flex flex-col pb-28">
 
     <!-- ==========================================
-         GLOBAL HEADER
+         GLOBAL HEADER WITH EMBEDDED MUNSHI BRAND LOGO
          ========================================== -->
-    <header class="px-6 pt-10 pb-4 flex justify-between items-center sticky top-0 z-30 glass-header">
+    <header class="px-6 pt-8 pb-4 flex justify-between items-center sticky top-0 z-30 glass-header border-b border-slate-200/50 bg-[#FAFAFA]/90 backdrop-blur-md">
+        <!-- Brand Logo & Store Identity -->
         <div class="flex items-center gap-3">
-            <!-- Munshi mark -->
-            <svg class="w-10 h-10 shrink-0" viewBox="0 0 64 64" role="img" aria-label="Munshi">
-                <rect width="64" height="64" rx="16" fill="#0F172A"/>
-                <path d="M17 46V22L32 38" fill="none" stroke="#F8FAFC" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M32 38L47 22V46" fill="none" stroke="#10B981" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M47 21C47 14 52 11 57 11C57 17.5 53 21 47 21Z" fill="#34D399"/>
-                <path d="M20 54H44" stroke="#334155" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            <div>
-                <div class="flex items-center gap-2">
-                    <p class="text-xs text-slate-500 font-medium tracking-wide uppercase" id="header-subtitle">Madina Kiryana</p>
-                    <button onclick="toggleSyncMode()" id="sync-badge"
-                        class="flex items-center gap-1.5 bg-white border border-slate-200/80 px-2 py-0.5 rounded-full shadow-xs active:scale-95 transition-all">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" id="sync-dot"></span>
-                        <span class="text-[10px] font-semibold text-slate-600" id="sync-text">Synced</span>
-                    </button>
+            <!-- Sleek Vector Logo Mark -->
+            <div class="w-11 h-11 rounded-2xl bg-slate-900 flex items-center justify-center shadow-md shadow-slate-900/10 shrink-0">
+                <svg class="w-7 h-7" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Munshi Logo">
+                    <path d="M17 46V22L32 38" stroke="#F8FAFC" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M32 38L47 22V46" stroke="#10B981" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M47 21C47 14 52 11 57 11C57 17.5 53 21 47 21Z" fill="#34D399"/>
+                    <circle cx="32" cy="18" r="2.5" fill="#10B981"/>
+                </svg>
+            </div>
+            
+            <div class="flex flex-col">
+                <div class="flex items-center gap-1.5">
+                    <span class="text-lg font-bold tracking-tight text-slate-900 leading-tight">Munshi<span class="text-emerald-500">.</span></span>
+                    <span class="text-[9px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60">ERP</span>
                 </div>
-                <h1 class="text-2xl font-semibold tracking-tight text-slate-900 mt-0.5" id="header-title">Haji Tariq</h1>
+                <p class="text-xs text-slate-500 font-medium tracking-wide mt-0.5" id="header-subtitle">Madina Kiryana &bull; <span class="text-slate-700 font-semibold" id="header-title">Haji Tariq</span></p>
             </div>
         </div>
+
+        <!-- Live Sync Pill Button -->
+        <button onclick="toggleSyncMode()" id="sync-badge"
+            class="flex items-center gap-1.5 bg-white border border-slate-200 px-2.5 py-1 rounded-full shadow-xs active:scale-95 transition-all">
+            <span class="w-2 h-2 rounded-full bg-emerald-500" id="sync-dot"></span>
+            <span class="text-[11px] font-semibold text-slate-700" id="sync-text">Synced</span>
+        </button>
     </header>
 
     <!-- ==========================================
          VIEW 1: HOME (VOICE AI & DAILY OVERVIEW)
          ========================================== -->
-    <main id="view-home" class="view-section flex-1 px-6 space-y-7 pt-2">
+    <main id="view-home" class="view-section flex-1 px-6 space-y-7 pt-4">
 
         <!-- Voice Assistant Hero Card -->
         <section>
-            <div class="soft-card rounded-[2rem] p-7 flex flex-col items-center text-center relative overflow-hidden">
+            <div class="soft-card rounded-[2rem] p-7 flex flex-col items-center text-center relative overflow-hidden bg-white border border-slate-100 shadow-sm">
                 <div class="relative z-10">
                     <button id="home-mic-btn" onclick="toggleVoiceRecording('home')"
                         class="w-20 h-20 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all duration-300 relative">
@@ -111,7 +119,7 @@
             <div class="grid grid-cols-2 gap-3.5">
                 <!-- Cash Sales -->
                 <div onclick="switchTab('bikri')"
-                    class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 cursor-pointer hover:border-slate-200 transition-all">
+                    class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 cursor-pointer hover:border-slate-200 transition-all bg-white border border-slate-100 shadow-xs">
                     <div class="flex justify-between items-center">
                         <p class="text-slate-500 text-xs font-medium">Cash Sales</p>
                         <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -123,7 +131,7 @@
                 </div>
                 <!-- Wasooli -->
                 <div onclick="openWasooliModal()"
-                    class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 cursor-pointer hover:border-slate-200 transition-all">
+                    class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 cursor-pointer hover:border-slate-200 transition-all bg-white border border-slate-100 shadow-xs">
                     <div class="flex justify-between items-center">
                         <p class="text-slate-500 text-xs font-medium">Wasooli (In)</p>
                         <span class="material-symbols-outlined text-slate-400 text-[16px]">payments</span>
@@ -135,7 +143,7 @@
                 </div>
                 <!-- Naya Udhaar -->
                 <div onclick="switchTab('udhaar')"
-                    class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 cursor-pointer hover:border-slate-200 transition-all">
+                    class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 cursor-pointer hover:border-slate-200 transition-all bg-white border border-slate-100 shadow-xs">
                     <div class="flex justify-between items-center">
                         <p class="text-slate-500 text-xs font-medium">Naya Udhaar</p>
                         <span class="w-2 h-2 rounded-full bg-red-500"></span>
@@ -147,7 +155,7 @@
                 </div>
                 <!-- Total Khata -->
                 <div onclick="switchTab('udhaar')"
-                    class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 cursor-pointer hover:border-slate-200 transition-all">
+                    class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 cursor-pointer hover:border-slate-200 transition-all bg-white border border-slate-100 shadow-xs">
                     <div class="flex justify-between items-center">
                         <p class="text-slate-500 text-xs font-medium">Total Khata</p>
                         <span class="material-symbols-outlined text-slate-400 text-[16px]">menu_book</span>
@@ -206,25 +214,25 @@
                 </button>
             </div>
             <div class="grid grid-cols-2 gap-3.5">
-                <div class="soft-card p-4 rounded-2xl flex flex-col justify-between h-24">
+                <div class="soft-card p-4 rounded-2xl flex flex-col justify-between h-24 bg-white border border-slate-100 shadow-xs">
                     <div class="flex justify-between items-center">
                         <span class="text-xs text-slate-500 font-medium">Total Products</span>
                         <span class="material-symbols-outlined text-slate-400 text-[18px]">category</span>
                     </div>
                     <p class="text-xl font-bold text-slate-900 tracking-tight" id="stock-kpi-count">6 Items</p>
                 </div>
-                <div onclick="setStockCategory('low')" class="soft-card p-4 rounded-2xl flex flex-col justify-between h-24 cursor-pointer border-red-100/80">
+                <div onclick="setStockCategory('low')" class="soft-card p-4 rounded-2xl flex flex-col justify-between h-24 cursor-pointer border border-red-100/80 bg-white shadow-xs">
                     <div class="flex justify-between items-center">
                         <span class="text-xs text-red-600 font-medium">Low Stock</span>
                         <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
                     </div>
                     <p class="text-xl font-bold text-red-600 tracking-tight" id="stock-kpi-low">2 Alerts</p>
                 </div>
-                <div class="soft-card p-4 rounded-2xl flex flex-col justify-between h-24">
+                <div class="soft-card p-4 rounded-2xl flex flex-col justify-between h-24 bg-white border border-slate-100 shadow-xs">
                     <span class="text-xs text-slate-500 font-medium">Inventory Cost</span>
                     <p class="text-lg font-bold text-slate-900 tracking-tight" id="stock-kpi-cost">Rs. 164,200</p>
                 </div>
-                <div class="soft-card p-4 rounded-2xl flex flex-col justify-between h-24">
+                <div class="soft-card p-4 rounded-2xl flex flex-col justify-between h-24 bg-white border border-slate-100 shadow-xs">
                     <span class="text-xs text-slate-500 font-medium">Expected Sales</span>
                     <p class="text-lg font-bold text-emerald-600 tracking-tight" id="stock-kpi-retail">Rs. 182,400</p>
                 </div>
@@ -265,7 +273,7 @@
          ========================================== -->
     <main id="view-bikri" class="view-section hidden flex-1 px-6 space-y-5 pt-2">
         <!-- Customer Selection -->
-        <section class="soft-card rounded-2xl p-4 space-y-3">
+        <section class="soft-card rounded-2xl p-4 space-y-3 bg-white border border-slate-100 shadow-xs">
             <div class="flex justify-between items-center">
                 <span class="text-xs font-semibold text-slate-700 uppercase tracking-wider">Customer Type</span>
                 <span class="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full">Parchi #1043</span>
@@ -296,7 +304,7 @@
         </section>
 
         <!-- Fast Add & Barcode Bar -->
-        <section class="soft-card rounded-2xl p-4 space-y-3">
+        <section class="soft-card rounded-2xl p-4 space-y-3 bg-white border border-slate-100 shadow-xs">
             <div class="flex gap-2">
                 <div class="relative flex-1">
                     <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">search</span>
@@ -313,7 +321,7 @@
         </section>
 
         <!-- Cart -->
-        <section class="soft-card rounded-2xl p-4 space-y-3">
+        <section class="soft-card rounded-2xl p-4 space-y-3 bg-white border border-slate-100 shadow-xs">
             <div class="flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <h3 class="text-sm font-semibold text-slate-900">Bill Items</h3>
@@ -325,7 +333,7 @@
         </section>
 
         <!-- Bill Calculation & Payment -->
-        <section class="soft-card rounded-2xl p-4 space-y-4">
+        <section class="soft-card rounded-2xl p-4 space-y-4 bg-white border border-slate-100 shadow-xs">
             <div class="space-y-2 text-xs">
                 <div class="flex justify-between text-slate-500">
                     <span>Subtotal</span>
@@ -394,7 +402,7 @@
         </section>
 
         <section class="space-y-3.5">
-            <div class="soft-card rounded-[2rem] p-6 relative overflow-hidden">
+            <div class="soft-card rounded-[2rem] p-6 relative overflow-hidden bg-white border border-slate-100 shadow-sm">
                 <p class="text-slate-500 text-xs font-medium uppercase tracking-wider">Total Receivable (Kul Udhaar)</p>
                 <p class="text-4xl font-bold tracking-tight text-slate-900 mt-1" id="udhaar-total-val">Rs. 45,650</p>
                 <div class="mt-5 pt-4 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
@@ -453,15 +461,15 @@
                 </button>
             </div>
             <div class="grid grid-cols-3 gap-2.5">
-                <div class="soft-card rounded-2xl p-3">
+                <div class="soft-card rounded-2xl p-3 bg-white border border-slate-100">
                     <p class="text-[10px] text-slate-400 font-semibold uppercase">Load Sales</p>
                     <p class="text-sm font-bold text-slate-900 mt-0.5" id="pkg-kpi-sales">Rs. 14,200</p>
                 </div>
-                <div class="soft-card rounded-2xl p-3 border-emerald-100">
+                <div class="soft-card rounded-2xl p-3 border border-emerald-100 bg-white">
                     <p class="text-[10px] text-emerald-600 font-semibold uppercase">Commission</p>
                     <p class="text-sm font-bold text-emerald-600 mt-0.5" id="pkg-kpi-profit">+Rs. 1,180</p>
                 </div>
-                <div class="soft-card rounded-2xl p-3">
+                <div class="soft-card rounded-2xl p-3 bg-white border border-slate-100">
                     <p class="text-[10px] text-slate-400 font-semibold uppercase">Transfers</p>
                     <p class="text-sm font-bold text-slate-900 mt-0.5" id="pkg-kpi-count">42 Sent</p>
                 </div>
@@ -478,7 +486,7 @@
         </section>
 
         <!-- Load Workspace -->
-        <section class="soft-card rounded-[2rem] p-5 space-y-4">
+        <section class="soft-card rounded-[2rem] p-5 space-y-4 bg-white border border-slate-100 shadow-sm">
             <div class="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl">
                 <button id="pkg-mode-bundle" onclick="setPkgMode('bundle')" class="py-2 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs transition-all">Super Bundles</button>
                 <button id="pkg-mode-direct" onclick="setPkgMode('direct')" class="py-2 rounded-lg text-xs font-medium text-slate-500 transition-all">Direct Easyload</button>
@@ -556,7 +564,7 @@
 
         <!-- Financial Snapshot 2×2 -->
         <section class="grid grid-cols-2 gap-3.5">
-            <div class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28">
+            <div class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 bg-white border border-slate-100 shadow-xs">
                 <div class="flex justify-between">
                     <span class="text-slate-500 text-xs font-medium">Total Sales</span>
                     <span class="material-symbols-outlined text-emerald-500 text-[18px]">trending_up</span>
@@ -566,7 +574,7 @@
                     <p class="text-[11px] text-emerald-600 font-medium mt-0.5">+14% growth</p>
                 </div>
             </div>
-            <div class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28">
+            <div class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 bg-white border border-slate-100 shadow-xs">
                 <div class="flex justify-between">
                     <span class="text-slate-500 text-xs font-medium">Net Profit</span>
                     <span class="material-symbols-outlined text-slate-400 text-[18px]">savings</span>
@@ -576,7 +584,7 @@
                     <p class="text-[11px] text-slate-400 font-medium mt-0.5">15.2% Net Margin</p>
                 </div>
             </div>
-            <div class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28">
+            <div class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 bg-white border border-slate-100 shadow-xs">
                 <div class="flex justify-between">
                     <span class="text-slate-500 text-xs font-medium">Godown Value</span>
                     <span class="material-symbols-outlined text-slate-400 text-[18px]">warehouse</span>
@@ -586,7 +594,7 @@
                     <p class="text-[11px] text-slate-400 font-medium mt-0.5">Retail Valuation</p>
                 </div>
             </div>
-            <div class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28">
+            <div class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 bg-white border border-slate-100 shadow-xs">
                 <div class="flex justify-between">
                     <span class="text-slate-500 text-xs font-medium">Receivables</span>
                     <span class="material-symbols-outlined text-red-400 text-[18px]">history_edu</span>
@@ -599,7 +607,7 @@
         </section>
 
         <!-- Sales Trend Chart -->
-        <section class="soft-card rounded-[2rem] p-6">
+        <section class="soft-card rounded-[2rem] p-6 bg-white border border-slate-100 shadow-xs">
             <div class="flex justify-between items-center mb-5">
                 <div>
                     <h3 class="text-slate-900 font-semibold text-base tracking-tight">Sales Trend</h3>
@@ -663,7 +671,7 @@
         <!-- Export Actions -->
         <section class="grid grid-cols-2 gap-3">
             <button onclick="showToast('PDF Karobari Report downloaded!')"
-                class="soft-card py-3.5 rounded-2xl text-xs font-semibold text-slate-900 flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                class="soft-card py-3.5 rounded-2xl text-xs font-semibold text-slate-900 flex items-center justify-center gap-2 active:scale-95 transition-transform bg-white border border-slate-100 shadow-xs">
                 <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> Export PDF
             </button>
             <button onclick="showToast('Summary shared to Haji Tariq WhatsApp!')"
@@ -676,7 +684,7 @@
     <!-- ==========================================
          BOTTOM NAVIGATION BAR
          ========================================== -->
-    <nav class="fixed bottom-0 max-w-md w-full glass-nav px-6 py-3.5 pb-6 flex justify-between items-center z-40">
+    <nav class="fixed bottom-0 max-w-md w-full glass-nav px-6 py-3.5 pb-6 flex justify-between items-center z-40 bg-[#FAFAFA]/95 backdrop-blur-md border-t border-slate-200/60">
         <button onclick="switchTab('home')" id="nav-home"
             class="nav-btn flex flex-col items-center gap-1 text-slate-900 transition-colors">
             <span class="material-symbols-outlined text-[24px] fill-icon">home</span>
@@ -862,4 +870,3 @@
 
 </body>
 </html>
-
