@@ -54,11 +54,16 @@ app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
   next(err);
 });
 
-// API Routes
+// API Routes (supports both direct Express routing and Vercel serverless rewrites)
 app.use('/api', healthRouter);
 app.use('/api', syncRouter);
 app.use('/api', balancesRouter);
 app.use('/api', stockRouter);
+
+app.use(healthRouter);
+app.use(syncRouter);
+app.use(balancesRouter);
+app.use(stockRouter);
 
 // Global error handler: Return JSON, never stack traces
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

@@ -9,6 +9,7 @@
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",
     "migrate": "tsx src/scripts/migrate.ts",
+    "seed": "tsx src/scripts/seed.ts",
     "reset-demo": "tsx src/scripts/resetDemo.ts"
   },
   "keywords": [],
