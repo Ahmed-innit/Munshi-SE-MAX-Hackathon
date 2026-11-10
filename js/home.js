@@ -5,36 +5,147 @@
    and edge cases for items/customers not present in DB.
    ============================================================ */
 
-function toggleVoiceRecording() {
-    state.isRecording = !state.isRecording;
+// Web Speech Recognition Controller (Browser Native Free API)
+let speechRecognizer = null;
+
+function initSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        console.warn('Web Speech API is not supported in this browser.');
+        return null;
+    }
+
+    const recognition = new SpeechRecognition();
+    // Urdu (Pakistan) recognition natively built-in
+    recognition.lang = 'ur-PK';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = function () {
+        state.isRecording = true;
+        const btn   = document.getElementById('home-mic-btn');
+        const title = document.getElementById('voice-status-title');
+        const sub   = document.getElementById('voice-status-sub');
+        if (btn) {
+            btn.classList.add('mic-pulse', 'bg-red-600');
+            btn.classList.remove('bg-slate-900');
+        }
+        if (title) title.innerText = 'Suniye... Ab Urdu Mein Bolein';
+        if (sub) sub.innerText   = 'Aap ki awaaz Roman Urdu mein convert ho rahi hai...';
+        showToast('Mic on hai: Urdu mein bolein...');
+    };
+
+    recognition.onresult = function (event) {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            transcript += event.results[i][0].transcript;
+        }
+
+        if (transcript.trim()) {
+            // Transliterate native Urdu audio speech directly into Roman Urdu
+            const romanUrdu = window.UrduTransliteration
+                ? window.UrduTransliteration.toRomanUrdu(transcript)
+                : transcript;
+
+            const input = document.getElementById('ai-command-input');
+            if (input) {
+                input.value = romanUrdu;
+            }
+
+            const sub = document.getElementById('voice-status-sub');
+            if (sub) {
+                sub.innerText = `Suna gaya: "${romanUrdu}"`;
+            }
+        }
+    };
+
+    recognition.onerror = function (event) {
+        console.error('Speech Recognition Error:', event.error);
+        stopVoiceRecordingUI();
+        if (event.error === 'not-allowed') {
+            showToast('Microphone ki ijazat (permission) nahi mili.');
+        } else if (event.error === 'no-speech') {
+            showToast('Koi awaaz nahi suni gayi.');
+        } else {
+            showToast(`Voice error: ${event.error}`);
+        }
+    };
+
+    recognition.onend = function () {
+        stopVoiceRecordingUI();
+        const input = document.getElementById('ai-command-input');
+        if (input && input.value.trim()) {
+            showToast('Awaaz kamyabi se Roman Urdu mein likh li gayi!');
+            // Automatically process the transcribed Roman Urdu command into DB confirmation card
+            processAICommand();
+        }
+    };
+
+    return recognition;
+}
+
+function stopVoiceRecordingUI() {
+    state.isRecording = false;
     const btn   = document.getElementById('home-mic-btn');
     const title = document.getElementById('voice-status-title');
     const sub   = document.getElementById('voice-status-sub');
-
-    if (state.isRecording) {
-        btn.classList.add('mic-pulse', 'bg-red-600');
-        btn.classList.remove('bg-slate-900');
-        title.innerText = 'Suniye... Ab Awaaz Mein Bolein';
-        sub.innerText   = 'Munshi AI aapki baat sun raha hai...';
-
-        setTimeout(() => {
-            if (!state.isRecording) return;
-            toggleVoiceRecording();
-            const samples = [
-                'Bhai Tariq ko 500 rupay udhaar diya',
-                'Chaudhry Bashir ne 2000 wasooli di',
-                '2 Tapal Chai aur 3kg Cheeni naqad bechi',
-                'Sabun 10 dabba naqad becha' // Example of missing DB item
-            ];
-            document.getElementById('ai-command-input').value =
-                samples[Math.floor(Math.random() * samples.length)];
-            processAICommand();
-        }, 2200);
-    } else {
+    if (btn) {
         btn.classList.remove('mic-pulse', 'bg-red-600');
         btn.classList.add('bg-slate-900');
-        title.innerText = 'Bol kar hisaab darj karein';
-        sub.innerText   = '"Bhai Tariq ko 500 udhaar diya" ya "2kg cheeni naqad bechi"';
+    }
+    if (title) title.innerText = 'Bol kar hisaab darj karein';
+    if (sub) sub.innerText   = '"Bhai Tariq ko 500 udhaar diya" ya "2kg cheeni naqad bechi"';
+}
+
+function toggleVoiceRecording() {
+    // If browser supports Web Speech API
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!speechRecognizer && SpeechRecognition) {
+        speechRecognizer = initSpeechRecognition();
+    }
+
+    if (speechRecognizer) {
+        if (state.isRecording) {
+            speechRecognizer.stop();
+        } else {
+            try {
+                speechRecognizer.start();
+            } catch (err) {
+                console.warn('Recognition already started or error:', err);
+                speechRecognizer.stop();
+            }
+        }
+    } else {
+        // Fallback simulation if running in an unsupported environment
+        state.isRecording = !state.isRecording;
+        const btn   = document.getElementById('home-mic-btn');
+        const title = document.getElementById('voice-status-title');
+        const sub   = document.getElementById('voice-status-sub');
+
+        if (state.isRecording) {
+            btn.classList.add('mic-pulse', 'bg-red-600');
+            btn.classList.remove('bg-slate-900');
+            title.innerText = 'Suniye... Ab Awaaz Mein Bolein';
+            sub.innerText   = 'Awaaz suni ja rahi hai...';
+
+            setTimeout(() => {
+                if (!state.isRecording) return;
+                stopVoiceRecordingUI();
+                const samples = [
+                    'Bhai Tariq ko 500 rupay udhaar diya',
+                    'Chaudhry Bashir ne 2000 wasooli di',
+                    '2 Tapal Chai aur 3kg Cheeni naqad bechi',
+                    'Sabun 10 dabba naqad becha'
+                ];
+                const spoken = samples[Math.floor(Math.random() * samples.length)];
+                document.getElementById('ai-command-input').value = spoken;
+                processAICommand();
+            }, 2400);
+        } else {
+            stopVoiceRecordingUI();
+        }
     }
 }
 
