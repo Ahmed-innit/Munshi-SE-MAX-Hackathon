@@ -1,5 +1,5 @@
 /* ============================================================
-   Munshi AI — Stock / Godown (Inventory) View
+   Munshi AI — Godown / Stock View (Roman Urdu)
    ============================================================ */
 
 function setStockCategory(cat) {
@@ -29,7 +29,6 @@ function renderStock() {
         return p.category === state.stockCategory;
     });
 
-    // Recalculate KPIs from full product list
     let totalCost   = 0, totalRetail = 0, lowCount = 0;
     state.products.forEach(p => {
         totalCost   += p.cost  * p.stock;
@@ -37,8 +36,8 @@ function renderStock() {
         if (p.stock <= p.minStock) lowCount++;
     });
 
-    document.getElementById('stock-kpi-count').innerText  = `${state.products.length} Items`;
-    document.getElementById('stock-kpi-low').innerText    = `${lowCount} Alerts`;
+    document.getElementById('stock-kpi-count').innerText  = `${state.products.length} Cheezein`;
+    document.getElementById('stock-kpi-low').innerText    = `${lowCount} Khatam Honay Wali`;
     document.getElementById('stock-kpi-cost').innerText   = `Rs. ${Math.round(totalCost).toLocaleString()}`;
     document.getElementById('stock-kpi-retail').innerText = `Rs. ${Math.round(totalRetail).toLocaleString()}`;
 
@@ -46,36 +45,36 @@ function renderStock() {
         const isLow  = p.stock <= p.minStock;
         const profit = p.price - p.cost;
         const badge  = isLow
-            ? `<span class="text-[11px] font-semibold text-red-600 bg-red-50 px-2.5 py-0.5 rounded-full">Low: ${p.stock} ${p.unit}</span>`
-            : `<span class="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">${p.stock} ${p.unit} in stock</span>`;
+            ? `<span class="text-[11px] font-semibold text-red-600 bg-red-50 px-2.5 py-0.5 rounded-full">Kam Hai: ${p.stock} ${p.unit}</span>`
+            : `<span class="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">${p.stock} ${p.unit} Mojood Hai</span>`;
 
         return `
             <div class="soft-card p-4 rounded-2xl space-y-3 ${isLow ? 'border-red-100' : ''} slide-up">
                 <div class="flex justify-between items-start gap-2">
                     <div>
                         <h4 class="font-semibold text-sm text-slate-900">${p.name}</h4>
-                        <p class="text-xs text-slate-400 mt-0.5">${p.category} • Per ${p.unit}</p>
+                        <p class="text-xs text-slate-400 mt-0.5">${p.category} • Fi ${p.unit}</p>
                     </div>
                     ${badge}
                 </div>
                 <div class="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl text-center">
                     <div>
-                        <span class="text-[10px] text-slate-400 block">Cost</span>
+                        <span class="text-[10px] text-slate-400 block">Kharid Rate</span>
                         <span class="text-xs font-semibold text-slate-700">Rs. ${p.cost}</span>
                     </div>
                     <div>
-                        <span class="text-[10px] text-slate-400 block">Retail</span>
+                        <span class="text-[10px] text-slate-400 block">Bikri Rate</span>
                         <span class="text-xs font-bold text-slate-900">Rs. ${p.price}</span>
                     </div>
                     <div>
-                        <span class="text-[10px] text-slate-400 block">Margin</span>
+                        <span class="text-[10px] text-slate-400 block">Bachat</span>
                         <span class="text-xs font-bold text-emerald-600">+Rs. ${profit}</span>
                     </div>
                 </div>
                 <div class="flex justify-between items-center pt-1">
                     <button onclick="addProductToPos(${p.id})"
                         class="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1 active:scale-95 transition-transform">
-                        <span class="material-symbols-outlined text-[15px]">add_shopping_cart</span> Add to POS Bill
+                        <span class="material-symbols-outlined text-[15px]">add_shopping_cart</span> Bill Mein Daalein
                     </button>
                     <div class="flex items-center gap-2 bg-slate-100 rounded-xl p-1">
                         <button onclick="adjustStock(${p.id}, -1)"
@@ -107,12 +106,12 @@ function submitNewProduct() {
     const sell  = parseFloat(document.getElementById('new-prod-sell').value)  || 120;
     const stock = parseFloat(document.getElementById('new-prod-stock').value) || 10;
 
-    if (!name) return showToast('Please enter product name');
+    if (!name) return showToast('Bara-e-meherbani cheez ka naam likhein');
 
     state.products.unshift({ id: Date.now(), name, category: cat, unit, cost, price: sell, stock, minStock: 5 });
     closeModal('modal-new-product');
     renderAll();
-    showToast(`${name} added to Godown!`);
+    showToast(`${name} godown mein darj ho gaya!`);
 }
 
 function simulateBarcodeScan(context) {
@@ -122,7 +121,6 @@ function simulateBarcodeScan(context) {
     } else {
         document.getElementById('stock-search').value = rnd.name.split(' ')[0];
         renderStock();
-        showToast(`Scanned Barcode: ${rnd.name}`);
+        showToast(`Barcode Scan Ho Gaya: ${rnd.name}`);
     }
 }
-

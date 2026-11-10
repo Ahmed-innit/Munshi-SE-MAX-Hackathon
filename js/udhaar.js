@@ -1,5 +1,5 @@
 /* ============================================================
-   Munshi AI — Udhaar Book (Khata Ledger) View
+   Munshi AI — Udhaar Khata Register (Roman Urdu)
    ============================================================ */
 
 function setUdhaarFilter(f) {
@@ -17,7 +17,7 @@ function renderUdhaarList() {
     const overdueSum  = state.customers.filter(c => c.overdueDays > 0).reduce((s, c) => s + c.balance, 0);
 
     document.getElementById('udhaar-total-val').innerText     = `Rs. ${totalUdhaar.toLocaleString()}`;
-    document.getElementById('udhaar-active-count').innerText  = `Across ${state.customers.length} active customer accounts`;
+    document.getElementById('udhaar-active-count').innerText  = `Kul ${state.customers.length} grahakon kay khatay active hain`;
     document.getElementById('udhaar-today-wasooli').innerText = `Rs. ${state.wasooliToday.toLocaleString()}`;
     document.getElementById('udhaar-overdue-val').innerText   = `Rs. ${overdueSum.toLocaleString()}`;
 
@@ -43,12 +43,12 @@ function renderUdhaarList() {
                         <div>
                             <h4 class="font-semibold text-sm text-slate-900">${c.name}</h4>
                             <p class="text-xs text-slate-400 mt-0.5">${c.role} • ${isOverdue
-                                ? `<span class="text-red-500 font-medium">${c.overdueDays}d Overdue</span>`
-                                : 'Regular'}</p>
+                                ? `<span class="text-red-500 font-medium">${c.overdueDays} Din Purana</span>`
+                                : 'Pakka Grahak'}</p>
                         </div>
                     </div>
                     <div class="text-right">
-                        <span class="text-[10px] text-slate-400 block">Balance</span>
+                        <span class="text-[10px] text-slate-400 block">Kul Baqiya</span>
                         <span class="text-base font-bold ${isOverdue ? 'text-red-600' : 'text-slate-900'}">
                             Rs. ${c.balance.toLocaleString()}
                         </span>
@@ -57,8 +57,8 @@ function renderUdhaarList() {
 
                 <div class="space-y-1">
                     <div class="flex justify-between text-[10px] text-slate-400 font-medium">
-                        <span>Credit Limit: Rs. ${c.limit.toLocaleString()}</span>
-                        <span>${pct}% Used</span>
+                        <span>Udhaar Had: Rs. ${c.limit.toLocaleString()}</span>
+                        <span>${pct}% Istemaal</span>
                     </div>
                     <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                         <div class="${pct > 80 ? 'bg-amber-500' : 'bg-slate-900'} h-full rounded-full" style="width:${pct}%"></div>
@@ -68,11 +68,11 @@ function renderUdhaarList() {
                 <div class="grid grid-cols-2 gap-2.5 pt-1">
                     <button onclick="openWasooliModal(${c.id})"
                         class="py-2.5 rounded-xl bg-slate-900 text-white text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95 transition-transform">
-                        <span class="material-symbols-outlined text-[16px]">payments</span> Wasooli
+                        <span class="material-symbols-outlined text-[16px]">payments</span> Wasooli Likhein
                     </button>
                     <button onclick="openCustomerDetailModal(${c.id})"
                         class="py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95 transition-transform">
-                        <span class="material-symbols-outlined text-[16px]">chat</span> Remind & Ledger
+                        <span class="material-symbols-outlined text-[16px]">chat</span> Paigham Bhejein
                     </button>
                 </div>
             </div>
@@ -83,7 +83,7 @@ function renderUdhaarList() {
 function openWasooliModal(defaultCustId) {
     const sel     = document.getElementById('wasooli-customer-select');
     sel.innerHTML = state.customers.map(c =>
-        `<option value="${c.id}" ${c.id === defaultCustId ? 'selected' : ''}>${c.name} (Bal: Rs. ${c.balance.toLocaleString()})</option>`
+        `<option value="${c.id}" ${c.id === defaultCustId ? 'selected' : ''}>${c.name} (Baqiya: Rs. ${c.balance.toLocaleString()})</option>`
     ).join('');
     document.getElementById('wasooli-amount-input').value = '';
     document.getElementById('modal-wasooli').classList.remove('hidden');
@@ -93,7 +93,7 @@ function openWasooliModal(defaultCustId) {
 function submitWasooli() {
     const custId = parseInt(document.getElementById('wasooli-customer-select').value, 10);
     const amt    = parseFloat(document.getElementById('wasooli-amount-input').value) || 0;
-    if (amt <= 0) return showToast('Enter a valid Wasooli amount');
+    if (amt <= 0) return showToast('Sahi wasooli raqam darj karein');
 
     const cust = state.customers.find(c => c.id === custId);
     if (cust) {
@@ -101,12 +101,12 @@ function submitWasooli() {
         state.wasooliToday += amt;
         state.transactions.unshift({
             id: Date.now(), title: `${cust.name} (${cust.role})`,
-            subtitle: 'Khata Wasooli Received • Just now', amount: amt, type: 'wasooli'
+            subtitle: 'Khata Wasooli Mili • Abhi abhi', amount: amt, type: 'wasooli'
         });
     }
     closeModal('modal-wasooli');
     renderAll();
-    showToast(`Rs. ${amt.toLocaleString()} Wasooli recorded!`);
+    showToast(`Rs. ${amt.toLocaleString()} Wasooli darj ho gayi!`);
 }
 
 function openNewCustomerModal() {
@@ -116,16 +116,16 @@ function openNewCustomerModal() {
 
 function submitNewCustomer() {
     const name  = document.getElementById('new-cust-name').value.trim();
-    const role  = document.getElementById('new-cust-role').value.trim()  || 'Regular Customer';
+    const role  = document.getElementById('new-cust-role').value.trim()  || 'Grahak';
     const phone = document.getElementById('new-cust-phone').value.trim() || '0300-1234567';
     const bal   = parseFloat(document.getElementById('new-cust-bal').value) || 0;
 
-    if (!name) return showToast('Please enter customer name');
+    if (!name) return showToast('Bara-e-meherbani grahak ka naam likhein');
 
     state.customers.unshift({ id: Date.now(), name, role, phone, balance: bal, limit: 20000, overdueDays: 0 });
     closeModal('modal-new-customer');
     renderAll();
-    showToast(`${name} added to Udhaar Book!`);
+    showToast(`${name} ka naya khata khul gaya!`);
 }
 
 function openCustomerDetailModal(custId) {
@@ -150,11 +150,10 @@ function copyReminderText() {
     temp.select();
     document.execCommand('copy');
     document.body.removeChild(temp);
-    showToast('Roman Urdu reminder copied!');
+    showToast('WhatsApp paigham copy ho gaya!');
 }
 
 function sendWhatsAppReminder() {
     closeModal('modal-customer-detail');
-    showToast('WhatsApp reminder queued for customer!');
+    showToast('WhatsApp par yaad-dihani paigham bhej diya gaya!');
 }
-

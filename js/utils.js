@@ -1,5 +1,5 @@
 /* ============================================================
-   Munshi AI — Shared Utilities & Master Render Loop
+   Munshi AI — Shared Utilities & Master Render Loop (Roman Urdu)
    ============================================================ */
 
 // ---- Modal Helpers ----
@@ -22,24 +22,24 @@ function showToast(msg) {
     }, 2800);
 }
 
-// ---- Master Render (called after every state mutation) ----
+// ---- Master Render ----
 function renderAll() {
-    // --- Home KPIs ---
+    // --- Home Rozana Hisaab ---
     const totalKhata = state.customers.reduce((s, c) => s + c.balance, 0);
     document.getElementById('home-kpi-cash').innerText         = `Rs. ${state.cashSalesToday.toLocaleString()}`;
     document.getElementById('home-kpi-wasooli').innerText      = `Rs. ${state.wasooliToday.toLocaleString()}`;
     document.getElementById('home-kpi-udhaar').innerText       = `Rs. ${state.nayaUdhaarToday.toLocaleString()}`;
     document.getElementById('home-kpi-total-khata').innerText  = `Rs. ${totalKhata.toLocaleString()}`;
-    document.getElementById('home-kpi-khata-count').innerText  = `${state.customers.length} active accounts`;
+    document.getElementById('home-kpi-khata-count').innerText  = `${state.customers.length} fa'al khatay`;
 
-    // --- Low Stock Alert Banner ---
+    // --- Kam Stock Alert Banner ---
     const lowItems = state.products.filter(p => p.stock <= p.minStock);
-    document.getElementById('home-lowstock-title').innerText = `${lowItems.length} Low Stock Alert${lowItems.length !== 1 ? 's' : ''}`;
+    document.getElementById('home-lowstock-title').innerText = `${lowItems.length} Cheezein Khatam Honay Wali Hain`;
     document.getElementById('home-lowstock-sub').innerText   = lowItems.length > 0
-        ? lowItems.map(i => i.name.split('(')[0].trim()).join(' & ') + ' running low'
-        : 'All godown items sufficiently stocked';
+        ? lowItems.map(i => i.name.split('(')[0].trim()).join(' aur ') + ' ka stock kam reh gaya hai'
+        : 'Godown mein tamam maal pura mojood hai';
 
-    // --- Per-view Renders ---
+    // --- Mukhtalif Safhaat Ka Render ---
     renderPendingAICard();
     renderHomeTransactions();
     renderStock();
@@ -54,9 +54,8 @@ function renderAll() {
     document.getElementById('rep-udhaar').innerText = `Rs. ${(totalKhata   / 1000).toFixed(1)}k`;
 }
 
-// ---- Bootstrap ----
+// ---- Shuruat (Bootstrap) ----
 window.onload = function () {
     populatePosCustomerDropdown();
     renderAll();
 };
-

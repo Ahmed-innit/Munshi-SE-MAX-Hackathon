@@ -1,12 +1,12 @@
 /* ============================================================
-   Munshi AI — Packages / Mobile Load View
+   Munshi AI — Mobile Load Aur Packages (Roman Urdu)
    ============================================================ */
 
 function renderPackagesView() {
     document.getElementById('pkg-wallet-balance').innerText = `Rs. ${state.walletBalance.toLocaleString()}`;
     document.getElementById('pkg-kpi-sales').innerText      = `Rs. ${state.loadSalesToday.toLocaleString()}`;
     document.getElementById('pkg-kpi-profit').innerText     = `+Rs. ${state.loadProfitToday.toLocaleString()}`;
-    document.getElementById('pkg-kpi-count').innerText      = `${state.loadCountToday} Sent`;
+    document.getElementById('pkg-kpi-count').innerText      = `${state.loadCountToday} Bhejay Gaye`;
 
     const networks = [
         { id: 'jazz',    name: 'Jazz',     dot: 'bg-red-500'   },
@@ -43,15 +43,15 @@ function renderPackagesView() {
                 <p class="text-[11px] text-slate-400 mt-0.5">${b.specs}</p>
                 <div class="mt-3 flex justify-between items-baseline">
                     <span class="font-bold text-sm text-slate-900">Rs. ${b.price}</span>
-                    <span class="text-[10px] font-bold text-emerald-600">+Rs.${b.profit}</span>
+                    <span class="text-[10px] font-bold text-emerald-600">+Rs.${b.profit} Munafa</span>
                 </div>
             </div>
         `;
     }).join('');
 
-    // Populate khata dropdown
+    // Khata dropdown
     document.getElementById('pkg-khata-select').innerHTML = state.customers.map(c =>
-        `<option value="${c.id}">${c.name} (Bal: Rs. ${c.balance})</option>`
+        `<option value="${c.id}">${c.name} (Baqiya: Rs. ${c.balance})</option>`
     ).join('');
 
     updatePkgCalculator();
@@ -152,7 +152,7 @@ function executeMobileLoad() {
     }
 
     const cost = price - profit;
-    if (cost > state.walletBalance) return showToast('Insufficient Retailer Wallet Balance!');
+    if (cost > state.walletBalance) return showToast('Retailer Wallet mein raqam kam hai!');
 
     state.walletBalance    -= cost;
     state.loadSalesToday   += price;
@@ -163,7 +163,7 @@ function executeMobileLoad() {
         state.cashSalesToday += price;
         state.transactions.unshift({
             id: Date.now(), title: `${label} (${phone})`,
-            subtitle: `Cash Load • +Rs. ${profit} Profit`, amount: price, type: 'sale'
+            subtitle: `Naqad Load • +Rs. ${profit} Munafa`, amount: price, type: 'sale'
         });
     } else {
         const custId = parseInt(document.getElementById('pkg-khata-select').value, 10);
@@ -172,17 +172,16 @@ function executeMobileLoad() {
         state.nayaUdhaarToday += price;
         state.transactions.unshift({
             id: Date.now(), title: `${cust ? cust.name : phone} — ${label}`,
-            subtitle: `Udhaar Load • +Rs. ${profit} Profit`, amount: price, type: 'udhaar'
+            subtitle: `Udhaar Load • +Rs. ${profit} Munafa`, amount: price, type: 'udhaar'
         });
     }
 
     renderAll();
-    showToast(`${label} sent to ${phone}! (+Rs.${profit} Profit)`);
+    showToast(`${label} kamyabi se ${phone} par bhej diya gaya! (+Rs.${profit} Munafa)`);
 }
 
 function topUpWallet() {
     state.walletBalance += 5000;
     renderPackagesView();
-    showToast('Rs. 5,000 added to Retailer Wallet');
+    showToast('Rs. 5,000 Retailer Wallet mein shamil ho gaye');
 }
-

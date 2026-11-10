@@ -1,5 +1,5 @@
 /* ============================================================
-   Munshi AI — Voice AI & Home View
+   Munshi AI — Awaaz Aur Home View (Roman Urdu)
    ============================================================ */
 
 function toggleVoiceRecording() {
@@ -11,17 +11,16 @@ function toggleVoiceRecording() {
     if (state.isRecording) {
         btn.classList.add('mic-pulse', 'bg-red-600');
         btn.classList.remove('bg-slate-900');
-        title.innerText = 'Listening... Speak now';
-        sub.innerText   = 'Bol kar hisaab likhwaein...';
+        title.innerText = 'Suniye... Ab Awaaz Mein Bolein';
+        sub.innerText   = 'Munshi AI aapki baat sun raha hai...';
 
-        // Auto-simulate voice input after 2.2s
         setTimeout(() => {
             if (!state.isRecording) return;
             toggleVoiceRecording();
             const samples = [
                 'Chaudhry Bashir ko 1200 rupay udhaar diya',
                 'Bhai Tariq ne 1500 cash wasooli di',
-                '3kg Cheeni aur 1 Tapal Tea cash sale'
+                '3kg Cheeni aur 1 Tapal Chai naqad bechi'
             ];
             document.getElementById('ai-command-input').value =
                 samples[Math.floor(Math.random() * samples.length)];
@@ -30,8 +29,8 @@ function toggleVoiceRecording() {
     } else {
         btn.classList.remove('mic-pulse', 'bg-red-600');
         btn.classList.add('bg-slate-900');
-        title.innerText = 'Tap to speak in Urdu';
-        sub.innerText   = '"Bhai Tariq ko 500 udhaar diya" or "2kg cheeni cash sale"';
+        title.innerText = 'Bol kar hisaab darj karein';
+        sub.innerText   = '"Bhai Tariq ko 500 udhaar diya" ya "2kg cheeni naqad bechi"';
     }
 }
 
@@ -49,28 +48,28 @@ function processAICommand() {
     const numMatch = text.match(/\d+/g);
     const amount   = numMatch ? parseInt(numMatch[numMatch.length - 1], 10) : 500;
 
-    // Fuzzy customer match
+    // Grahak dhoondein
     let matchedCustomer = state.customers.find(c =>
         lower.includes((c.name.split(' ')[1] || c.name).toLowerCase())
     );
-    if (!matchedCustomer) matchedCustomer = state.customers[1]; // default: Bhai Tariq
+    if (!matchedCustomer) matchedCustomer = state.customers[1]; // default Bhai Tariq
 
-    if (lower.includes('wasool') || lower.includes('diya cash') || lower.includes('wapis')) {
+    if (lower.includes('wasool') || lower.includes('diya cash') || lower.includes('wapis') || lower.includes('aayi')) {
         state.pendingAI = {
             customerId:    matchedCustomer.id,
             customerName:  `${matchedCustomer.name} (${matchedCustomer.role})`,
             amount,
             type:  'wasooli',
-            label: 'Wasooli (Payment In)',
+            label: 'Wasooli Mili (Paisa Aaya)',
             rawText: `"${text}"`
         };
-    } else if (lower.includes('udhaar') || lower.includes('khata')) {
+    } else if (lower.includes('udhaar') || lower.includes('khata') || lower.includes('likho')) {
         state.pendingAI = {
             customerId:    matchedCustomer.id,
             customerName:  `${matchedCustomer.name} (${matchedCustomer.role})`,
             amount,
             type:  'udhaar',
-            label: 'Naya Udhaar',
+            label: 'Naya Udhaar Diya',
             rawText: `"${text}"`
         };
     } else {
@@ -79,14 +78,14 @@ function processAICommand() {
             customerName: text,
             amount:       amount < 100 ? 940 : amount,
             type:  'sale',
-            label: 'Cash Sale (Naqad)',
+            label: 'Naqad Bikri (Cash Sale)',
             rawText: `"${text}"`
         };
     }
 
     input.value = '';
     renderPendingAICard();
-    showToast('Munshi AI parsed your voice entry');
+    showToast('Munshi AI ne aapki awaaz samajh li');
 }
 
 function renderPendingAICard() {
@@ -100,7 +99,7 @@ function renderPendingAICard() {
         <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-lg flex flex-col gap-4 slide-up">
             <div class="flex justify-between items-center">
                 <span class="text-[10px] font-semibold uppercase tracking-wider bg-white/10 text-slate-300 px-2.5 py-1 rounded-full">
-                    AI Verification Needed
+                    AI Tasdeeq Ki Zaroorat Hai
                 </span>
                 <span class="text-xs text-slate-400 italic truncate max-w-[160px]">${p.rawText}</span>
             </div>
@@ -119,11 +118,11 @@ function renderPendingAICard() {
             <div class="grid grid-cols-3 gap-2 pt-1">
                 <button onclick="confirmPendingAI()"
                     class="col-span-2 bg-white text-slate-900 py-2.5 rounded-xl font-semibold text-xs active:scale-95 transition-all flex items-center justify-center gap-1">
-                    <span class="material-symbols-outlined text-[16px]">check</span> Confirm Entry
+                    <span class="material-symbols-outlined text-[16px]">check</span> Tasdeeq Karein (Save)
                 </button>
                 <button onclick="dismissPendingAI()"
                     class="bg-slate-800 text-slate-300 py-2.5 rounded-xl font-medium text-xs active:scale-95 transition-all">
-                    Dismiss
+                    Khatam Karein
                 </button>
             </div>
         </div>
@@ -138,19 +137,19 @@ function confirmPendingAI() {
     if (p.type === 'udhaar') {
         state.nayaUdhaarToday += p.amount;
         if (c) c.balance += p.amount;
-        state.transactions.unshift({ id: Date.now(), title: p.customerName, subtitle: 'Voice AI Udhaar • Just now',   amount: p.amount, type: 'udhaar'  });
+        state.transactions.unshift({ id: Date.now(), title: p.customerName, subtitle: 'Awaaz Se Naya Udhaar • Abhi abhi',   amount: p.amount, type: 'udhaar'  });
     } else if (p.type === 'wasooli') {
         state.wasooliToday += p.amount;
         if (c) c.balance = Math.max(0, c.balance - p.amount);
-        state.transactions.unshift({ id: Date.now(), title: p.customerName, subtitle: 'Voice AI Wasooli • Just now', amount: p.amount, type: 'wasooli' });
+        state.transactions.unshift({ id: Date.now(), title: p.customerName, subtitle: 'Awaaz Se Wasooli • Abhi abhi', amount: p.amount, type: 'wasooli' });
     } else {
         state.cashSalesToday += p.amount;
-        state.transactions.unshift({ id: Date.now(), title: p.customerName, subtitle: 'Voice AI Cash Sale • Just now', amount: p.amount, type: 'sale' });
+        state.transactions.unshift({ id: Date.now(), title: p.customerName, subtitle: 'Awaaz Se Naqad Bikri • Abhi abhi', amount: p.amount, type: 'sale' });
     }
 
     state.pendingAI = null;
     renderAll();
-    showToast('Saved to Khata & Daily Ledger!');
+    showToast('Khata Aur Roznamcha Mein Darj Kar Diya!');
 }
 
 function dismissPendingAI() {
@@ -200,4 +199,3 @@ function goToLowStock() {
     switchTab('stock');
     setStockCategory('low');
 }
-
