@@ -66,11 +66,11 @@ function renderUdhaarList() {
                 </div>
 
                 <div class="grid grid-cols-2 gap-2.5 pt-1">
-                    <button onclick="openWasooliModal(${c.id})"
+                    <button onclick="openWasooliModal('${c.id}')"
                         class="py-2.5 rounded-xl bg-slate-900 text-white text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95 transition-transform">
                         <span class="material-symbols-outlined text-[16px]">payments</span> Wasooli
                     </button>
-                    <button onclick="openCustomerDetailModal(${c.id})"
+                    <button onclick="openCustomerDetailModal('${c.id}')"
                         class="py-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95 transition-transform">
                         <span class="material-symbols-outlined text-[16px]">chat</span> Remind & Ledger
                     </button>
@@ -83,27 +83,45 @@ function renderUdhaarList() {
 function openWasooliModal(defaultCustId) {
     const sel     = document.getElementById('wasooli-customer-select');
     sel.innerHTML = state.customers.map(c =>
-        `<option value="${c.id}" ${c.id === defaultCustId ? 'selected' : ''}>${c.name} (Bal: Rs. ${c.balance.toLocaleString()})</option>`
+        `<option value="${c.id}" ${String(c.id) === String(defaultCustId) ? 'selected' : ''}>${c.name} (Bal: Rs. ${c.balance.toLocaleString()})</option>`
     ).join('');
     document.getElementById('wasooli-amount-input').value = '';
     document.getElementById('modal-wasooli').classList.remove('hidden');
     document.getElementById('modal-wasooli').classList.add('flex');
 }
 
-function submitWasooli() {
-    const custId = parseInt(document.getElementById('wasooli-customer-select').value, 10);
+async function submitWasooli() {
+    const custId = document.getElementById('wasooli-customer-select').value;
     const amt    = parseFloat(document.getElementById('wasooli-amount-input').value) || 0;
     if (amt <= 0) return showToast('Enter a valid Wasooli amount');
 
-    const cust = state.customers.find(c => c.id === custId);
+    const cust = state.customers.find(c => String(c.id) === String(custId));
     if (cust) {
         cust.balance       = Math.max(0, cust.balance - amt);
         state.wasooliToday += amt;
         state.transactions.unshift({
-            id: Date.now(), title: `${cust.name} (${cust.role})`,
-            subtitle: 'Khata Wasooli Received • Just now', amount: amt, type: 'wasooli'
+            id: window.api ? api.newId() : Date.now(),
+            title: `${cust.name} (${cust.role || 'Customer'})`,
+            subtitle: 'Khata Wasooli Received • Just now',
+            amount: amt,
+            type: 'wasooli'
         });
     }
+
+    if (window.api && cust) {
+        try {
+            await api.syncOperation('PAYMENT_RECEIVED', {
+                id: api.newId(),
+                customerId: String(cust.id),
+                amountPaisa: Math.round(amt * 100),
+                note: 'Khata Wasooli received'
+            });
+            api.loadBalances();
+        } catch (err) {
+            console.warn('Backend sync failed for wasooli:', err);
+        }
+    }
+
     closeModal('modal-wasooli');
     renderAll();
     showToast(`Rs. ${amt.toLocaleString()} Wasooli recorded!`);
@@ -114,7 +132,7 @@ function openNewCustomerModal() {
     document.getElementById('modal-new-customer').classList.add('flex');
 }
 
-function submitNewCustomer() {
+async function submitNewCustomer() {
     const name  = document.getElementById('new-cust-name').value.trim();
     const role  = document.getElementById('new-cust-role').value.trim()  || 'Regular Customer';
     const phone = document.getElementById('new-cust-phone').value.trim() || '0300-1234567';
@@ -122,14 +140,32 @@ function submitNewCustomer() {
 
     if (!name) return showToast('Please enter customer name');
 
-    state.customers.unshift({ id: Date.now(), name, role, phone, balance: bal, limit: 20000, overdueDays: 0 });
+    const custId = window.api ? api.newId() : crypto.randomUUID();
+    const balPaisa = Math.round(bal * 100);
+
+    if (window.api) {
+        try {
+            await api.syncOperation('CUSTOMER_UPSERT', {
+                id: custId,
+                name: name,
+                phone: phone,
+                openingBalancePaisa: balPaisa,
+                creditLimitPaisa: 20000 * 100
+            });
+        } catch (err) {
+            console.warn('Customer upsert sync failed:', err);
+        }
+    }
+
+    state.customers.unshift({ id: custId, name, role, phone, balance: bal, limit: 20000, overdueDays: 0 });
     closeModal('modal-new-customer');
     renderAll();
+    populatePosCustomerDropdown();
     showToast(`${name} added to Udhaar Book!`);
 }
 
 function openCustomerDetailModal(custId) {
-    const cust = state.customers.find(c => c.id === custId);
+    const cust = state.customers.find(c => String(c.id) === String(custId));
     if (!cust) return;
 
     document.getElementById('detail-cust-name').innerText  = cust.name;

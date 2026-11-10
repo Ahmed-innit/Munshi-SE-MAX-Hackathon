@@ -55,8 +55,23 @@ function renderAll() {
 }
 
 // ---- Bootstrap ----
-window.onload = function () {
+window.onload = async function () {
     populatePosCustomerDropdown();
     renderAll();
+
+    if (window.api) {
+        try {
+            const isOnline = await api.checkHealth();
+            if (isOnline) {
+                await api.seedIfEmpty();
+                await api.loadStock();
+                await api.loadBalances();
+                renderAll();
+                populatePosCustomerDropdown();
+            }
+        } catch (e) {
+            console.warn('Initial backend sync failed:', e);
+        }
+    }
 };
 

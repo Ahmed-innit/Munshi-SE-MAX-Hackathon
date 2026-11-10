@@ -1,5 +1,6 @@
 /* ============================================================
    Munshi AI — Stock / Godown (Inventory) View
+   Connected to Backend Synchronization Engine
    ============================================================ */
 
 function setStockCategory(cat) {
@@ -12,17 +13,50 @@ function setStockCategory(cat) {
     renderStock();
 }
 
-function adjustStock(id, delta) {
-    const prod = state.products.find(p => p.id === id);
+async function adjustStock(id, delta) {
+    const prod = state.products.find(p => String(p.id) === String(id));
     if (!prod) return;
-    prod.stock = Math.max(0, +(prod.stock + delta).toFixed(1));
+
+    if (typeof api !== 'undefined') {
+        if (delta > 0) {
+            await api.syncOperation('STOCK_PURCHASE', {
+                id: crypto.randomUUID(),
+                productId: prod.id,
+                quantityBase: delta,
+                unitCostPaisa: Math.round(prod.cost * 100),
+                reason: 'Stock count adjustment'
+            });
+        } else {
+            const res = await api.syncOperation('SALE_CASH', {
+                id: crypto.randomUUID(),
+                lines: [{
+                    productId: prod.id,
+                    quantityBase: Math.abs(delta),
+                    unitPricePaisa: Math.round(prod.price * 100),
+                    totalPaisa: Math.round(prod.price * Math.abs(delta) * 100),
+                    productName: prod.name
+                }],
+                totalPaisa: Math.round(prod.price * Math.abs(delta) * 100),
+                paymentMethod: 'CASH',
+                createdAt: new Date().toISOString()
+            });
+            if (res.data && res.data.code === 'NEGATIVE_STOCK') {
+                showToast(`Stock cannot go below 0 for ${prod.name}`);
+                return;
+            }
+        }
+        await api.loadStock();
+    } else {
+        prod.stock = Math.max(0, +(prod.stock + delta).toFixed(1));
+    }
     renderAll();
+    showToast(`Stock updated for ${prod.name}`);
 }
 
 function renderStock() {
     const query    = (document.getElementById('stock-search')?.value || '').toLowerCase();
     const filtered = state.products.filter(p => {
-        const matchSearch = p.name.toLowerCase().includes(query) || p.category.toLowerCase().includes(query);
+        const matchSearch = p.name.toLowerCase().includes(query) || (p.category && p.category.toLowerCase().includes(query));
         if (!matchSearch) return false;
         if (state.stockCategory === 'all')  return true;
         if (state.stockCategory === 'low')  return p.stock <= p.minStock;
@@ -37,12 +71,19 @@ function renderStock() {
         if (p.stock <= p.minStock) lowCount++;
     });
 
-    document.getElementById('stock-kpi-count').innerText  = `${state.products.length} Items`;
-    document.getElementById('stock-kpi-low').innerText    = `${lowCount} Alerts`;
-    document.getElementById('stock-kpi-cost').innerText   = `Rs. ${Math.round(totalCost).toLocaleString()}`;
-    document.getElementById('stock-kpi-retail').innerText = `Rs. ${Math.round(totalRetail).toLocaleString()}`;
+    const kpiCount = document.getElementById('stock-kpi-count');
+    const kpiLow = document.getElementById('stock-kpi-low');
+    const kpiCost = document.getElementById('stock-kpi-cost');
+    const kpiRetail = document.getElementById('stock-kpi-retail');
+    if (kpiCount) kpiCount.innerText  = `${state.products.length} Items`;
+    if (kpiLow) kpiLow.innerText    = `${lowCount} Alerts`;
+    if (kpiCost) kpiCost.innerText   = `Rs. ${Math.round(totalCost).toLocaleString()}`;
+    if (kpiRetail) kpiRetail.innerText = `Rs. ${Math.round(totalRetail).toLocaleString()}`;
 
-    document.getElementById('stock-items-list').innerHTML = filtered.map(p => {
+    const listEl = document.getElementById('stock-items-list');
+    if (!listEl) return;
+
+    listEl.innerHTML = filtered.map(p => {
         const isLow  = p.stock <= p.minStock;
         const profit = p.price - p.cost;
         const badge  = isLow
@@ -54,7 +95,7 @@ function renderStock() {
                 <div class="flex justify-between items-start gap-2">
                     <div>
                         <h4 class="font-semibold text-sm text-slate-900">${p.name}</h4>
-                        <p class="text-xs text-slate-400 mt-0.5">${p.category} • Per ${p.unit}</p>
+                        <p class="text-xs text-slate-400 mt-0.5">${p.category || 'Kiryana'} • Per ${p.unit}</p>
                     </div>
                     ${badge}
                 </div>
@@ -73,17 +114,17 @@ function renderStock() {
                     </div>
                 </div>
                 <div class="flex justify-between items-center pt-1">
-                    <button onclick="addProductToPos(${p.id})"
+                    <button onclick="addProductToPos('${p.id}')"
                         class="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1 active:scale-95 transition-transform">
                         <span class="material-symbols-outlined text-[15px]">add_shopping_cart</span> Add to POS Bill
                     </button>
                     <div class="flex items-center gap-2 bg-slate-100 rounded-xl p-1">
-                        <button onclick="adjustStock(${p.id}, -1)"
+                        <button onclick="adjustStock('${p.id}', -1)"
                             class="w-7 h-7 rounded-lg bg-white text-slate-700 flex items-center justify-center shadow-xs active:scale-90 transition-transform">
                             <span class="material-symbols-outlined text-[16px]">remove</span>
                         </button>
                         <span class="text-xs font-bold text-slate-900 min-w-[28px] text-center">${p.stock}</span>
-                        <button onclick="adjustStock(${p.id}, 1)"
+                        <button onclick="adjustStock('${p.id}', 1)"
                             class="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center shadow-xs active:scale-90 transition-transform">
                             <span class="material-symbols-outlined text-[16px]">add</span>
                         </button>
@@ -99,7 +140,7 @@ function openNewProductModal() {
     document.getElementById('modal-new-product').classList.add('flex');
 }
 
-function submitNewProduct() {
+async function submitNewProduct() {
     const name  = document.getElementById('new-prod-name').value.trim();
     const cat   = document.getElementById('new-prod-cat').value;
     const unit  = document.getElementById('new-prod-unit').value.trim() || 'Pack';
@@ -109,13 +150,41 @@ function submitNewProduct() {
 
     if (!name) return showToast('Please enter product name');
 
-    state.products.unshift({ id: Date.now(), name, category: cat, unit, cost, price: sell, stock, minStock: 5 });
+    const productId = crypto.randomUUID();
+
+    if (typeof api !== 'undefined') {
+        // Sync product to PostgreSQL
+        await api.syncOperation('PRODUCT_UPSERT', {
+            id: productId,
+            name,
+            baseUnit: unit,
+            purchasePricePaisa: Math.round(cost * 100),
+            salePricePaisa: Math.round(sell * 100),
+            lowStockThresholdBase: 5
+        });
+
+        // Sync opening stock
+        if (stock > 0) {
+            await api.syncOperation('STOCK_PURCHASE', {
+                id: crypto.randomUUID(),
+                productId,
+                quantityBase: stock,
+                unitCostPaisa: Math.round(cost * 100),
+                reason: 'Initial godown purchase'
+            });
+        }
+        await api.loadStock();
+    } else {
+        state.products.unshift({ id: productId, name, category: cat, unit, cost, price: sell, stock, minStock: 5 });
+    }
+
     closeModal('modal-new-product');
     renderAll();
-    showToast(`${name} added to Godown!`);
+    showToast(`${name} added to Godown & Synced!`);
 }
 
 function simulateBarcodeScan(context) {
+    if (state.products.length === 0) return showToast('No products in catalog');
     const rnd = state.products[Math.floor(Math.random() * state.products.length)];
     if (context === 'pos') {
         addProductToPos(rnd.id);
@@ -125,4 +194,3 @@ function simulateBarcodeScan(context) {
         showToast(`Scanned Barcode: ${rnd.name}`);
     }
 }
-

@@ -166,13 +166,16 @@ function executeMobileLoad() {
             subtitle: `Cash Load • +Rs. ${profit} Profit`, amount: price, type: 'sale'
         });
     } else {
-        const custId = parseInt(document.getElementById('pkg-khata-select').value, 10);
-        const cust   = state.customers.find(c => c.id === custId);
+        const custId = document.getElementById('pkg-khata-select').value;
+        const cust   = state.customers.find(c => String(c.id) === String(custId));
         if (cust) cust.balance += price;
         state.nayaUdhaarToday += price;
         state.transactions.unshift({
-            id: Date.now(), title: `${cust ? cust.name : phone} — ${label}`,
-            subtitle: `Udhaar Load • +Rs. ${profit} Profit`, amount: price, type: 'udhaar'
+            id: window.api ? api.newId() : Date.now(),
+            title: `${cust ? cust.name : phone} — ${label}`,
+            subtitle: `Udhaar Load • +Rs. ${profit} Profit`,
+            amount: price,
+            type: 'udhaar'
         });
     }
 
