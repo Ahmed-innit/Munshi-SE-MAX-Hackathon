@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="ur-Latn">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Munshi AI — Sleek Kiryana ERP</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0" rel="stylesheet">
+
+    <!-- App Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="selection:bg-slate-200">
+
+<!-- =============================================
+     MOBILE APP SHELL
+     ============================================= -->
+<div class="max-w-md mx-auto min-h-screen bg-[#FAFAFA] relative shadow-2xl border-x border-slate-200/60 flex flex-col pb-28">
+
+    <!-- ==========================================
+         GLOBAL HEADER
+         ========================================== -->
+    <header class="px-6 pt-10 pb-4 flex justify-between items-center sticky top-0 z-30 glass-header">
+        <div>
+            <div class="flex items-center gap-2">
+                <p class="text-xs text-slate-500 font-medium tracking-wide uppercase" id="header-subtitle">Madina Kiryana</p>
+                <button onclick="toggleSyncMode()" id="sync-badge"
+                    class="flex items-center gap-1.5 bg-white border border-slate-200/80 px-2 py-0.5 rounded-full shadow-xs active:scale-95 transition-all">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" id="sync-dot"></span>
+                    <span class="text-[10px] font-semibold text-slate-600" id="sync-text">Synced</span>
+                </button>
+            </div>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 mt-0.5" id="header-title">Haji Tariq</h1>
+        </div>
+        <div class="flex items-center gap-2.5">
+            <button onclick="switchTab('reports')" id="header-reports-btn"
+                class="w-10 h-10 rounded-full bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 hover:text-slate-900 shadow-xs active:scale-95 transition-all"
+                title="Karobari Reports">
+                <span class="material-symbols-outlined text-[20px]">insights</span>
+            </button>
+            <button onclick="openProfileModal()" class="relative group active:scale-95 transition-transform">
+                <div class="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-semibold text-sm shadow-sm overflow-hidden">
+                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBSacKmfhpn0yieXF2BPgm_tCf-SPpceqJjBvJS8Cnt_iNVlscAQ5ntC4J8FkJycsmiWVdpO52TDLqkeLpM6bnEIeIDUs3aXRwn6PGtM55_GKoECLgiELROGcv3qTKeGHuvp8_-EfFf-o81kDMuncqBoCZeaKhx7eFJF4uTtkFEhdqoglkUk6z_9oXckYKHa_V_L_O5cOiSxoc_Mi36qcS7mpJLy88Jk7B1kyEG_iQm"
+                        onerror="this.style.display='none'; this.parentElement.innerText='HT'"
+                        class="w-full h-full object-cover" alt="Haji Tariq">
+                </div>
+                <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#FAFAFA] rounded-full"></div>
+            </button>
+        </div>
+    </header>
+
+    <!-- ==========================================
+         VIEW 1: HOME (VOICE AI & DAILY OVERVIEW)
+         ========================================== -->
+    <main id="view-home" class="view-section flex-1 px-6 space-y-7 pt-2">
+
+        <!-- Voice Assistant Hero Card -->
+        <section>
+            <div class="soft-card rounded-[2rem] p-7 flex flex-col items-center text-center relative overflow-hidden">
+                <div class="relative z-10">
+                    <button id="home-mic-btn" onclick="toggleVoiceRecording('home')"
+                        class="w-20 h-20 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all duration-300 relative">
+                        <span class="material-symbols-outlined text-3xl" id="home-mic-icon">mic</span>
+                    </button>
+                </div>
+                <h2 class="mt-4 text-base font-semibold text-slate-900" id="voice-status-title">Tap to speak in Urdu</h2>
+                <p class="text-slate-400 text-xs mt-1 max-w-[240px]" id="voice-status-sub">
+                    "Bhai Tariq ko 500 udhaar diya" or "2kg cheeni cash sale"
+                </p>
+
+                <!-- Natural Language Input Bar -->
+                <div class="w-full mt-5 flex items-center bg-slate-50 border border-slate-200/70 rounded-2xl p-1.5 focus-within:border-slate-400 focus-within:bg-white transition-all">
+                    <input id="ai-command-input" type="text"
+                        placeholder="Or type Roman Urdu command..."
+                        class="flex-1 bg-transparent px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 outline-none"
+                        onkeydown="if(event.key==='Enter') processAICommand()">
+                    <button onclick="processAICommand()"
+                        class="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0 active:scale-90 transition-transform">
+                        <span class="material-symbols-outlined text-[18px]">arrow_upward</span>
+                    </button>
+                </div>
+
+                <!-- Quick Prompt Chips -->
+                <div class="w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-3">
+                    <button onclick="prefillAICommand('Bhai Tariq ko 850 rupay udhaar diya')"
+                        class="shrink-0 text-[11px] font-medium bg-slate-100 hover:bg-slate-200/70 text-slate-700 px-3 py-1.5 rounded-full transition-colors">Naya Udhaar</button>
+                    <button onclick="prefillAICommand('Chaudhry Bashir ne 2000 wasooli di')"
+                        class="shrink-0 text-[11px] font-medium bg-slate-100 hover:bg-slate-200/70 text-slate-700 px-3 py-1.5 rounded-full transition-colors">Wasooli Aayi</button>
+                    <button onclick="prefillAICommand('2 Tapal Tea aur 5kg Cheeni cash sale')"
+                        class="shrink-0 text-[11px] font-medium bg-slate-100 hover:bg-slate-200/70 text-slate-700 px-3 py-1.5 rounded-full transition-colors">Maal Becha</button>
+                    <button onclick="prefillAICommand('Jazz 500 load 03015582910')"
+                        class="shrink-0 text-[11px] font-medium bg-slate-100 hover:bg-slate-200/70 text-slate-700 px-3 py-1.5 rounded-full transition-colors">Easyload</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dynamic AI Pending Confirmation Card -->
+        <section id="ai-pending-container"></section>
+
+        <!-- Today's Summary (2×2 Grid) -->
+        <section>
+            <div class="flex justify-between items-center mb-3.5">
+                <h3 class="text-slate-900 font-semibold text-base tracking-tight">Today's Summary</h3>
+                <button onclick="switchTab('reports')"
+                    class="text-xs font-medium text-slate-400 hover:text-slate-900 flex items-center gap-0.5 transition-colors">
+                    Analytics <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+                </button>
+            </div>
+            <div class="grid grid-cols-2 gap-3.5">
+                <!-- Cash Sales -->
+                <div onclick="switchTab('bikri')"
+                    class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 cursor-pointer hover:border-slate-200 transition-all">
+                    <div class="flex justify-between items-center">
+                        <p class="text-slate-500 text-xs font-medium">Cash Sales</p>
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-semibold tracking-tight text-slate-900" id="home-kpi-cash">Rs. 38,450</p>
+                        <p class="text-[11px] text-emerald-600 font-medium mt-0.5">+14% vs yesterday</p>
+                    </div>
+                </div>
+                <!-- Wasooli -->
+                <div onclick="openWasooliModal()"
+                    class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 cursor-pointer hover:border-slate-200 transition-all">
+                    <div class="flex justify-between items-center">
+                        <p class="text-slate-500 text-xs font-medium">Wasooli (In)</p>
+                        <span class="material-symbols-outlined text-slate-400 text-[16px]">payments</span>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-semibold tracking-tight text-slate-900" id="home-kpi-wasooli">Rs. 18,500</p>
+                        <p class="text-[11px] text-slate-400 font-medium mt-0.5">Cash + Raast QR</p>
+                    </div>
+                </div>
+                <!-- Naya Udhaar -->
+                <div onclick="switchTab('udhaar')"
+                    class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 cursor-pointer hover:border-slate-200 transition-all">
+                    <div class="flex justify-between items-center">
+                        <p class="text-slate-500 text-xs font-medium">Naya Udhaar</p>
+                        <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-semibold tracking-tight text-red-500" id="home-kpi-udhaar">Rs. 6,200</p>
+                        <p class="text-[11px] text-slate-400 font-medium mt-0.5">Today's credit</p>
+                    </div>
+                </div>
+                <!-- Total Khata -->
+                <div onclick="switchTab('udhaar')"
+                    class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 cursor-pointer hover:border-slate-200 transition-all">
+                    <div class="flex justify-between items-center">
+                        <p class="text-slate-500 text-xs font-medium">Total Khata</p>
+                        <span class="material-symbols-outlined text-slate-400 text-[16px]">menu_book</span>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-semibold tracking-tight text-slate-900" id="home-kpi-total-khata">Rs. 45,650</p>
+                        <p class="text-[11px] text-slate-400 font-medium mt-0.5" id="home-kpi-khata-count">4 active accounts</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Low Stock Alert Banner -->
+        <section>
+            <div onclick="goToLowStock()"
+                class="bg-red-50/70 border border-red-100 rounded-2xl p-4 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-xl">inventory_2</span>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-sm text-red-950" id="home-lowstock-title">Low Stock Alert</p>
+                        <p class="text-xs text-red-700 mt-0.5" id="home-lowstock-sub">Tapal Tea & Dal Channa running low</p>
+                    </div>
+                </div>
+                <span class="material-symbols-outlined text-red-400">chevron_right</span>
+            </div>
+        </section>
+
+        <!-- Recent Activity Feed -->
+        <section>
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-slate-900 font-semibold text-base tracking-tight">Recent Activity</h3>
+                <div class="flex gap-1" id="home-tx-filters">
+                    <button onclick="setHomeTxFilter('all')"     data-filter="all"     class="home-filter-pill text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-900 text-white">All</button>
+                    <button onclick="setHomeTxFilter('sale')"    data-filter="sale"    class="home-filter-pill text-[11px] font-medium px-2.5 py-1 rounded-full text-slate-500 hover:text-slate-900">Sales</button>
+                    <button onclick="setHomeTxFilter('udhaar')"  data-filter="udhaar"  class="home-filter-pill text-[11px] font-medium px-2.5 py-1 rounded-full text-slate-500 hover:text-slate-900">Udhaar</button>
+                    <button onclick="setHomeTxFilter('wasooli')" data-filter="wasooli" class="home-filter-pill text-[11px] font-medium px-2.5 py-1 rounded-full text-slate-500 hover:text-slate-900">Wasooli</button>
+                </div>
+            </div>
+            <div class="space-y-2.5" id="home-tx-list"></div>
+        </section>
+    </main>
+
+    <!-- ==========================================
+         VIEW 2: STOCK / GODOWN
+         ========================================== -->
+    <main id="view-stock" class="view-section hidden flex-1 px-6 space-y-6 pt-2">
+        <!-- Summary Bento -->
+        <section class="space-y-3.5">
+            <div class="flex justify-between items-center">
+                <p class="text-xs text-slate-500 font-medium" id="stock-subtitle-summary">Real-time Godown Valuation</p>
+                <button onclick="openNewProductModal()"
+                    class="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform">
+                    <span class="material-symbols-outlined text-[16px]">add</span> New Product
+                </button>
+            </div>
+            <div class="grid grid-cols-2 gap-3.5">
+                <div class="soft-card p-4 rounded-2xl flex flex-col justify-between h-24">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-slate-500 font-medium">Total Products</span>
+                        <span class="material-symbols-outlined text-slate-400 text-[18px]">category</span>
+                    </div>
+                    <p class="text-xl font-bold text-slate-900 tracking-tight" id="stock-kpi-count">6 Items</p>
+                </div>
+                <div onclick="setStockCategory('low')" class="soft-card p-4 rounded-2xl flex flex-col justify-between h-24 cursor-pointer border-red-100/80">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-red-600 font-medium">Low Stock</span>
+                        <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+                    </div>
+                    <p class="text-xl font-bold text-red-600 tracking-tight" id="stock-kpi-low">2 Alerts</p>
+                </div>
+                <div class="soft-card p-4 rounded-2xl flex flex-col justify-between h-24">
+                    <span class="text-xs text-slate-500 font-medium">Inventory Cost</span>
+                    <p class="text-lg font-bold text-slate-900 tracking-tight" id="stock-kpi-cost">Rs. 164,200</p>
+                </div>
+                <div class="soft-card p-4 rounded-2xl flex flex-col justify-between h-24">
+                    <span class="text-xs text-slate-500 font-medium">Expected Sales</span>
+                    <p class="text-lg font-bold text-emerald-600 tracking-tight" id="stock-kpi-retail">Rs. 182,400</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Search & Filter -->
+        <section class="space-y-3">
+            <div class="flex gap-2">
+                <div class="flex-1 bg-white border border-slate-200/80 rounded-2xl px-3.5 py-2.5 flex items-center shadow-xs focus-within:border-slate-400 transition-colors">
+                    <span class="material-symbols-outlined text-slate-400 text-[20px] mr-2">search</span>
+                    <input id="stock-search" oninput="renderStock()" type="text"
+                        placeholder="Search item (Ghee, Rice, Tea)..."
+                        class="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 outline-none">
+                </div>
+                <button onclick="simulateBarcodeScan('stock')"
+                    class="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-sm active:scale-95 transition-transform"
+                    title="Simulate Barcode Scan">
+                    <span class="material-symbols-outlined text-[20px]">barcode_scanner</span>
+                </button>
+            </div>
+            <!-- Category Pills -->
+            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1" id="stock-cat-pills">
+                <button onclick="setStockCategory('all')"            data-cat="all"            class="stock-cat-btn shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-900 text-white">All Items</button>
+                <button onclick="setStockCategory('low')"            data-cat="low"            class="stock-cat-btn shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">Low Stock</button>
+                <button onclick="setStockCategory('Grain & Pulses')" data-cat="Grain & Pulses" class="stock-cat-btn shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">Daalein & Chawal</button>
+                <button onclick="setStockCategory('Ghee & Oil')"     data-cat="Ghee & Oil"     class="stock-cat-btn shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">Ghee & Oil</button>
+                <button onclick="setStockCategory('Tea & Dairy')"    data-cat="Tea & Dairy"    class="stock-cat-btn shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">Chai & Dairy</button>
+            </div>
+        </section>
+
+        <!-- Product List -->
+        <section class="space-y-3" id="stock-items-list"></section>
+    </main>
+
+    <!-- ==========================================
+         VIEW 3: BIKRI / POS COUNTER
+         ========================================== -->
+    <main id="view-bikri" class="view-section hidden flex-1 px-6 space-y-5 pt-2">
+        <!-- Customer Selection -->
+        <section class="soft-card rounded-2xl p-4 space-y-3">
+            <div class="flex justify-between items-center">
+                <span class="text-xs font-semibold text-slate-700 uppercase tracking-wider">Customer Type</span>
+                <span class="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full">Parchi #1043</span>
+            </div>
+            <div class="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-xl">
+                <button id="pos-cust-walkin" onclick="setPosCustomerMode('walkin')"
+                    class="py-2 rounded-lg text-xs font-semibold transition-all bg-white text-slate-900 shadow-xs">
+                    Naqad (Walk-in)
+                </button>
+                <button id="pos-cust-khata" onclick="setPosCustomerMode('khata')"
+                    class="py-2 rounded-lg text-xs font-medium text-slate-500 transition-all">
+                    Khata (Regular)
+                </button>
+            </div>
+            <div id="pos-khata-selector-box" class="hidden pt-1">
+                <div class="flex items-center justify-between bg-slate-50 border border-slate-200/70 rounded-xl p-2.5">
+                    <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                        <div class="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold shrink-0" id="pos-cust-initials">BT</div>
+                        <select id="pos-customer-select" onchange="onPosCustomerChange()"
+                            class="bg-transparent font-semibold text-sm text-slate-900 outline-none w-full truncate cursor-pointer"></select>
+                    </div>
+                    <div class="text-right pl-2 shrink-0">
+                        <span class="text-[10px] text-slate-400 block">Prev Balance</span>
+                        <span class="text-xs font-bold text-red-600" id="pos-cust-prev-bal">Rs. 6,450</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Fast Add & Barcode Bar -->
+        <section class="soft-card rounded-2xl p-4 space-y-3">
+            <div class="flex gap-2">
+                <div class="relative flex-1">
+                    <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">search</span>
+                    <input id="pos-item-search" oninput="renderPosQuickPills()" type="text"
+                        placeholder="Search or tap item to add..."
+                        class="w-full bg-slate-50 border border-slate-200/70 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 outline-none focus:bg-white focus:border-slate-400">
+                </div>
+                <button onclick="simulateBarcodeScan('pos')"
+                    class="px-3 rounded-xl bg-slate-900 text-white flex items-center gap-1 text-xs font-medium active:scale-95 transition-transform">
+                    <span class="material-symbols-outlined text-[16px]">barcode_scanner</span> Scan
+                </button>
+            </div>
+            <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-0.5" id="pos-quick-pills"></div>
+        </section>
+
+        <!-- Cart -->
+        <section class="soft-card rounded-2xl p-4 space-y-3">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <h3 class="text-sm font-semibold text-slate-900">Bill Items</h3>
+                    <span class="text-[11px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full" id="pos-cart-badge">0 Items</span>
+                </div>
+                <button onclick="clearPosCart()" class="text-xs text-red-500 font-medium hover:underline">Clear All</button>
+            </div>
+            <div class="space-y-2" id="pos-cart-list"></div>
+        </section>
+
+        <!-- Bill Calculation & Payment -->
+        <section class="soft-card rounded-2xl p-4 space-y-4">
+            <div class="space-y-2 text-xs">
+                <div class="flex justify-between text-slate-500">
+                    <span>Subtotal</span>
+                    <span class="font-semibold text-slate-900" id="pos-subtotal">Rs. 0</span>
+                </div>
+                <div class="flex justify-between items-center text-slate-500">
+                    <span>Discount (Riayat)</span>
+                    <div class="flex items-center gap-1">
+                        <span>- Rs.</span>
+                        <input id="pos-discount" oninput="renderPosCart()" type="number" min="0" value="0"
+                            class="w-16 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-right font-semibold text-slate-900 outline-none">
+                    </div>
+                </div>
+                <div class="pt-2 border-t border-slate-100 flex justify-between items-baseline">
+                    <span class="text-sm font-semibold text-slate-900">Net Payable</span>
+                    <span class="text-2xl font-bold tracking-tight text-slate-900" id="pos-grand-total">Rs. 0</span>
+                </div>
+            </div>
+
+            <div class="space-y-2 pt-1">
+                <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Payment Method</span>
+                <div class="grid grid-cols-3 gap-2">
+                    <button id="pos-pay-cash"   onclick="setPosPaymentMode('cash')"   class="py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-1 bg-slate-900 text-white shadow-xs transition-all"><span class="material-symbols-outlined text-[18px]">payments</span> Naqad</button>
+                    <button id="pos-pay-udhaar" onclick="setPosPaymentMode('udhaar')" class="py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-1 bg-slate-50 text-slate-600 border border-slate-200/60 transition-all"><span class="material-symbols-outlined text-[18px]">menu_book</span> Udhaar</button>
+                    <button id="pos-pay-split"  onclick="setPosPaymentMode('split')"  class="py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-1 bg-slate-50 text-slate-600 border border-slate-200/60 transition-all"><span class="material-symbols-outlined text-[18px]">call_split</span> Split</button>
+                </div>
+            </div>
+
+            <div id="pos-split-box" class="hidden bg-slate-50 p-3 rounded-xl space-y-2 border border-slate-200/60">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="font-medium text-slate-600">Cash Paid Now:</span>
+                    <input id="pos-split-cash" oninput="updatePosContextBanner()" type="number" min="0" value="500"
+                        class="w-24 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-right font-bold text-slate-900 outline-none">
+                </div>
+                <div class="flex justify-between items-center text-xs">
+                    <span class="font-medium text-slate-500">Added to Khata:</span>
+                    <span class="font-bold text-red-600" id="pos-split-udhaar">Rs. 0</span>
+                </div>
+            </div>
+
+            <div id="pos-context-banner" class="bg-slate-50 rounded-xl p-3 text-xs text-slate-600 flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>
+                <span>Full amount will be recorded in today's Cash Sales.</span>
+            </div>
+
+            <button onclick="completePosSale()"
+                class="w-full py-3.5 rounded-2xl bg-slate-900 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all">
+                <span class="material-symbols-outlined text-[18px]">receipt_long</span> Confirm & Generate Parchi
+            </button>
+        </section>
+    </main>
+
+    <!-- ==========================================
+         VIEW 4: UDHAAR BOOK
+         ========================================== -->
+    <main id="view-udhaar" class="view-section hidden flex-1 px-6 space-y-6 pt-2">
+        <section class="grid grid-cols-2 gap-3">
+            <button onclick="openNewCustomerModal()"
+                class="bg-slate-900 text-white py-3 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-transform">
+                <span class="material-symbols-outlined text-[18px]">person_add</span> New Customer
+            </button>
+            <button onclick="openWasooliModal()"
+                class="bg-white border border-slate-200 text-slate-900 py-3 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-transform">
+                <span class="material-symbols-outlined text-[18px] text-emerald-600">payments</span> Record Wasooli
+            </button>
+        </section>
+
+        <section class="space-y-3.5">
+            <div class="soft-card rounded-[2rem] p-6 relative overflow-hidden">
+                <p class="text-slate-500 text-xs font-medium uppercase tracking-wider">Total Receivable (Kul Udhaar)</p>
+                <p class="text-4xl font-bold tracking-tight text-slate-900 mt-1" id="udhaar-total-val">Rs. 45,650</p>
+                <div class="mt-5 pt-4 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
+                    <span id="udhaar-active-count">Across 4 active customer accounts</span>
+                    <span class="text-emerald-600 font-semibold">Auto-Backed Up</span>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3.5">
+                <div class="bg-emerald-50/60 border border-emerald-100 p-4 rounded-2xl flex flex-col justify-between h-24">
+                    <span class="text-emerald-800 text-xs font-medium">Today's Wasooli</span>
+                    <p class="text-xl font-bold text-emerald-950 tracking-tight" id="udhaar-today-wasooli">Rs. 18,500</p>
+                </div>
+                <div class="bg-red-50/60 border border-red-100 p-4 rounded-2xl flex flex-col justify-between h-24">
+                    <span class="text-red-800 text-xs font-medium">Overdue (&gt;30d)</span>
+                    <p class="text-xl font-bold text-red-950 tracking-tight" id="udhaar-overdue-val">Rs. 14,800</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="space-y-3">
+            <div class="bg-white border border-slate-200/80 rounded-2xl px-3.5 py-2.5 flex items-center shadow-xs">
+                <span class="material-symbols-outlined text-slate-400 text-[20px] mr-2">search</span>
+                <input id="udhaar-search" oninput="renderUdhaarList()" type="text"
+                    placeholder="Search customer name or phone..."
+                    class="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 outline-none">
+            </div>
+            <div class="flex gap-2 overflow-x-auto no-scrollbar" id="udhaar-filter-pills">
+                <button onclick="setUdhaarFilter('all')"     data-filter="all"     class="udhaar-filter-btn px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-900 text-white">All Accounts</button>
+                <button onclick="setUdhaarFilter('overdue')" data-filter="overdue" class="udhaar-filter-btn px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">Overdue</button>
+                <button onclick="setUdhaarFilter('high')"    data-filter="high"    class="udhaar-filter-btn px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">High Balance</button>
+            </div>
+        </section>
+
+        <section class="space-y-3.5" id="udhaar-customer-list"></section>
+    </main>
+
+    <!-- ==========================================
+         VIEW 5: PACKAGES & MOBILE LOAD
+         ========================================== -->
+    <main id="view-packages" class="view-section hidden flex-1 px-6 space-y-5 pt-2">
+        <!-- Wallet Bar -->
+        <section class="space-y-3">
+            <div class="bg-slate-900 text-white rounded-2xl p-4 flex items-center justify-between shadow-md">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-emerald-400">account_balance_wallet</span>
+                    </div>
+                    <div>
+                        <p class="text-[11px] text-slate-400 font-medium">OneLoad Retailer Wallet</p>
+                        <p class="text-xl font-bold tracking-tight" id="pkg-wallet-balance">Rs. 24,850</p>
+                    </div>
+                </div>
+                <button onclick="topUpWallet()"
+                    class="bg-white/15 hover:bg-white/25 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-colors active:scale-95">
+                    + Top Up
+                </button>
+            </div>
+            <div class="grid grid-cols-3 gap-2.5">
+                <div class="soft-card rounded-2xl p-3">
+                    <p class="text-[10px] text-slate-400 font-semibold uppercase">Load Sales</p>
+                    <p class="text-sm font-bold text-slate-900 mt-0.5" id="pkg-kpi-sales">Rs. 14,200</p>
+                </div>
+                <div class="soft-card rounded-2xl p-3 border-emerald-100">
+                    <p class="text-[10px] text-emerald-600 font-semibold uppercase">Commission</p>
+                    <p class="text-sm font-bold text-emerald-600 mt-0.5" id="pkg-kpi-profit">+Rs. 1,180</p>
+                </div>
+                <div class="soft-card rounded-2xl p-3">
+                    <p class="text-[10px] text-slate-400 font-semibold uppercase">Transfers</p>
+                    <p class="text-sm font-bold text-slate-900 mt-0.5" id="pkg-kpi-count">42 Sent</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Network Selection -->
+        <section>
+            <div class="flex justify-between items-center mb-2.5">
+                <span class="text-xs font-semibold text-slate-700">Select Network</span>
+                <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Prefix Auto-Detect</span>
+            </div>
+            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1" id="pkg-network-pills"></div>
+        </section>
+
+        <!-- Load Workspace -->
+        <section class="soft-card rounded-[2rem] p-5 space-y-4">
+            <div class="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl">
+                <button id="pkg-mode-bundle" onclick="setPkgMode('bundle')" class="py-2 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs transition-all">Super Bundles</button>
+                <button id="pkg-mode-direct" onclick="setPkgMode('direct')" class="py-2 rounded-lg text-xs font-medium text-slate-500 transition-all">Direct Easyload</button>
+            </div>
+
+            <div>
+                <label class="text-xs font-semibold text-slate-600 pl-1">Customer Mobile Number</label>
+                <div class="mt-1 relative flex items-center">
+                    <span class="material-symbols-outlined absolute left-3.5 text-slate-400 text-[18px]">call</span>
+                    <input id="pkg-phone-input" oninput="onPkgPhoneInput(this.value)" type="tel" value="0301-5582910"
+                        placeholder="03XX-XXXXXXX"
+                        class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl py-3 pl-10 pr-16 text-sm font-semibold text-slate-900 outline-none focus:bg-white focus:border-slate-400 tracking-wide">
+                    <span id="pkg-detected-badge"
+                        class="absolute right-3 text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-900 text-white">JAZZ</span>
+                </div>
+            </div>
+
+            <div id="pkg-bundles-container" class="grid grid-cols-2 gap-2.5"></div>
+
+            <div id="pkg-direct-container" class="hidden space-y-3">
+                <div>
+                    <label class="text-xs font-semibold text-slate-600 pl-1">Easyload Amount (Rs.)</label>
+                    <input id="pkg-direct-amount" oninput="updatePkgCalculator()" type="number" min="50" value="300"
+                        class="mt-1 w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 px-4 text-lg font-bold text-slate-900 outline-none focus:bg-white">
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="setDirectLoadAmt(100)"  class="flex-1 py-1.5 rounded-xl bg-slate-100 text-xs font-semibold text-slate-700 hover:bg-slate-200">Rs. 100</button>
+                    <button onclick="setDirectLoadAmt(300)"  class="flex-1 py-1.5 rounded-xl bg-slate-100 text-xs font-semibold text-slate-700 hover:bg-slate-200">Rs. 300</button>
+                    <button onclick="setDirectLoadAmt(500)"  class="flex-1 py-1.5 rounded-xl bg-slate-100 text-xs font-semibold text-slate-700 hover:bg-slate-200">Rs. 500</button>
+                    <button onclick="setDirectLoadAmt(1000)" class="flex-1 py-1.5 rounded-xl bg-slate-100 text-xs font-semibold text-slate-700 hover:bg-slate-200">Rs. 1000</button>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 rounded-2xl p-3.5 flex justify-between items-center border border-slate-100">
+                <div>
+                    <p class="text-[11px] text-slate-400 font-medium">Customer Pays: <strong class="text-slate-800" id="pkg-calc-price">Rs. 1,200</strong></p>
+                    <p class="text-[11px] text-slate-400 font-medium mt-0.5">Wallet Deducted: <span id="pkg-calc-cost">Rs. 1,090</span></p>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] uppercase tracking-wider font-semibold text-emerald-600 block">Your Profit</span>
+                    <span class="text-base font-bold text-emerald-600" id="pkg-calc-profit">+Rs. 110</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-xl">
+                <button id="pkg-pay-cash"  onclick="setPkgPayMode('cash')"  class="py-2 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs">Naqad Cash</button>
+                <button id="pkg-pay-khata" onclick="setPkgPayMode('khata')" class="py-2 rounded-lg text-xs font-medium text-slate-500">Udhaar Khata</button>
+            </div>
+
+            <div id="pkg-khata-customer-box" class="hidden">
+                <select id="pkg-khata-select"
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-semibold text-slate-800 outline-none"></select>
+            </div>
+
+            <button onclick="executeMobileLoad()"
+                class="w-full bg-slate-900 text-white font-semibold text-sm py-3.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all">
+                <span class="material-symbols-outlined text-[18px]">send_to_mobile</span> Confirm & Send Load
+            </button>
+        </section>
+    </main>
+
+    <!-- ==========================================
+         VIEW 6: KAROBARI REPORTS
+         ========================================== -->
+    <main id="view-reports" class="view-section hidden flex-1 px-6 space-y-6 pt-2">
+        <!-- Timeframe Selector -->
+        <section>
+            <div class="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+                <button onclick="setReportPeriod('today')" data-period="today" class="rep-period-btn flex-1 py-2 rounded-lg text-xs font-medium text-slate-500 transition-all">Aaj</button>
+                <button onclick="setReportPeriod('week')"  data-period="week"  class="rep-period-btn flex-1 py-2 rounded-lg text-xs font-medium text-slate-500 transition-all">Hafta</button>
+                <button onclick="setReportPeriod('month')" data-period="month" class="rep-period-btn flex-1 py-2 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs transition-all">Mahina</button>
+                <button onclick="setReportPeriod('year')"  data-period="year"  class="rep-period-btn flex-1 py-2 rounded-lg text-xs font-medium text-slate-500 transition-all">Saal</button>
+            </div>
+        </section>
+
+        <!-- Financial Snapshot 2×2 -->
+        <section class="grid grid-cols-2 gap-3.5">
+            <div class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28">
+                <div class="flex justify-between">
+                    <span class="text-slate-500 text-xs font-medium">Total Sales</span>
+                    <span class="material-symbols-outlined text-emerald-500 text-[18px]">trending_up</span>
+                </div>
+                <div>
+                    <p class="text-2xl font-bold text-slate-900 tracking-tight" id="rep-sales">Rs. 384.5k</p>
+                    <p class="text-[11px] text-emerald-600 font-medium mt-0.5">+14% growth</p>
+                </div>
+            </div>
+            <div class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28">
+                <div class="flex justify-between">
+                    <span class="text-slate-500 text-xs font-medium">Net Profit</span>
+                    <span class="material-symbols-outlined text-slate-400 text-[18px]">savings</span>
+                </div>
+                <div>
+                    <p class="text-2xl font-bold text-slate-900 tracking-tight" id="rep-profit">Rs. 58.4k</p>
+                    <p class="text-[11px] text-slate-400 font-medium mt-0.5">15.2% Net Margin</p>
+                </div>
+            </div>
+            <div class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28">
+                <div class="flex justify-between">
+                    <span class="text-slate-500 text-xs font-medium">Godown Value</span>
+                    <span class="material-symbols-outlined text-slate-400 text-[18px]">warehouse</span>
+                </div>
+                <div>
+                    <p class="text-xl font-bold text-slate-900 tracking-tight" id="rep-stock">Rs. 182.4k</p>
+                    <p class="text-[11px] text-slate-400 font-medium mt-0.5">Retail Valuation</p>
+                </div>
+            </div>
+            <div class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28">
+                <div class="flex justify-between">
+                    <span class="text-slate-500 text-xs font-medium">Receivables</span>
+                    <span class="material-symbols-outlined text-red-400 text-[18px]">history_edu</span>
+                </div>
+                <div>
+                    <p class="text-xl font-bold text-red-600 tracking-tight" id="rep-udhaar">Rs. 45.6k</p>
+                    <p class="text-[11px] text-slate-400 font-medium mt-0.5">Market Udhaar</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sales Trend Chart -->
+        <section class="soft-card rounded-[2rem] p-6">
+            <div class="flex justify-between items-center mb-5">
+                <div>
+                    <h3 class="text-slate-900 font-semibold text-base tracking-tight">Sales Trend</h3>
+                    <p class="text-xs text-slate-400">Cash vs Udhaar Ratio</p>
+                </div>
+                <span class="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg" id="rep-chart-badge">Monthly</span>
+            </div>
+            <div class="w-full h-32">
+                <svg class="w-full h-full overflow-visible" viewBox="0 0 320 130">
+                    <line x1="20" y1="20"  x2="300" y2="20"  stroke="#F1F5F9" stroke-width="1" stroke-dasharray="4 4"/>
+                    <line x1="20" y1="55"  x2="300" y2="55"  stroke="#F1F5F9" stroke-width="1" stroke-dasharray="4 4"/>
+                    <line x1="20" y1="90"  x2="300" y2="90"  stroke="#F1F5F9" stroke-width="1" stroke-dasharray="4 4"/>
+                    <g>
+                        <rect x="42" y="50"  width="24" height="40" rx="4" class="fill-slate-900 transition-all duration-300"/>
+                        <rect x="42" y="32"  width="24" height="16" rx="3" class="fill-slate-200 transition-all duration-300"/>
+                        <text x="54"  y="112" text-anchor="middle" class="fill-slate-400 text-[10px] font-medium">W1</text>
+                    </g>
+                    <g>
+                        <rect x="114" y="45" width="24" height="45" rx="4" class="fill-slate-900 transition-all duration-300"/>
+                        <rect x="114" y="27" width="24" height="16" rx="3" class="fill-slate-200 transition-all duration-300"/>
+                        <text x="126" y="112" text-anchor="middle" class="fill-slate-400 text-[10px] font-medium">W2</text>
+                    </g>
+                    <g>
+                        <rect x="186" y="40" width="24" height="50" rx="4" class="fill-slate-900 transition-all duration-300"/>
+                        <rect x="186" y="22" width="24" height="16" rx="3" class="fill-slate-200 transition-all duration-300"/>
+                        <text x="198" y="112" text-anchor="middle" class="fill-slate-400 text-[10px] font-medium">W3</text>
+                    </g>
+                    <g>
+                        <rect x="258" y="32" width="24" height="58" rx="4" class="fill-slate-900 transition-all duration-300"/>
+                        <rect x="258" y="14" width="24" height="16" rx="3" class="fill-slate-200 transition-all duration-300"/>
+                        <circle cx="270" cy="6" r="3" class="fill-emerald-500"/>
+                        <text x="270" y="112" text-anchor="middle" class="fill-slate-900 text-[10px] font-bold">W4</text>
+                    </g>
+                </svg>
+            </div>
+            <div class="flex items-center justify-center gap-6 mt-3 pt-3 border-t border-slate-50">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-slate-900"></span>
+                    <span class="text-xs text-slate-600 font-medium">Cash (72%)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-slate-200"></span>
+                    <span class="text-xs text-slate-600 font-medium">Udhaar (28%)</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Munshi AI Advisor -->
+        <section class="bg-slate-900 text-white rounded-2xl p-5 shadow-md flex gap-3.5 items-start">
+            <div class="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+                <span class="material-symbols-outlined text-emerald-400 text-[20px]">auto_awesome</span>
+            </div>
+            <div>
+                <h4 class="font-semibold text-sm">Munshi AI Tajziya</h4>
+                <p class="text-slate-300 text-xs mt-1 leading-relaxed">
+                    Weekend demand for Guard Basmati Rice and Cooking Oil spikes by 35%. Restock Tapal Tea before tomorrow morning.
+                </p>
+            </div>
+        </section>
+
+        <!-- Export Actions -->
+        <section class="grid grid-cols-2 gap-3">
+            <button onclick="showToast('PDF Karobari Report downloaded!')"
+                class="soft-card py-3.5 rounded-2xl text-xs font-semibold text-slate-900 flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> Export PDF
+            </button>
+            <button onclick="showToast('Summary shared to Haji Tariq WhatsApp!')"
+                class="bg-emerald-600 text-white py-3.5 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform">
+                <span class="material-symbols-outlined text-[18px]">share</span> WhatsApp Report
+            </button>
+        </section>
+    </main>
+
+    <!-- ==========================================
+         BOTTOM NAVIGATION BAR
+         ========================================== -->
+    <nav class="fixed bottom-0 max-w-md w-full glass-nav px-6 py-3.5 pb-6 flex justify-between items-center z-40">
+        <button onclick="switchTab('home')" id="nav-home"
+            class="nav-btn flex flex-col items-center gap-1 text-slate-900 transition-colors">
+            <span class="material-symbols-outlined text-[24px] fill-icon">home</span>
+            <span class="text-[10px] font-semibold leading-none">Home</span>
+        </button>
+        <button onclick="switchTab('stock')" id="nav-stock"
+            class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-900 transition-colors">
+            <span class="material-symbols-outlined text-[24px]">inventory_2</span>
+            <span class="text-[10px] font-medium leading-none">Stock</span>
+        </button>
+        <button onclick="switchTab('bikri')" id="nav-bikri"
+            class="w-14 h-14 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-lg -mt-8 hover:scale-105 active:scale-95 transition-all duration-200 ring-4 ring-[#FAFAFA]">
+            <span class="material-symbols-outlined text-[26px]">add_shopping_cart</span>
+        </button>
+        <button onclick="switchTab('udhaar')" id="nav-udhaar"
+            class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-900 transition-colors">
+            <span class="material-symbols-outlined text-[24px]">menu_book</span>
+            <span class="text-[10px] font-medium leading-none">Udhaar</span>
+        </button>
+        <button onclick="switchTab('packages')" id="nav-packages"
+            class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-900 transition-colors">
+            <span class="material-symbols-outlined text-[24px]">cell_tower</span>
+            <span class="text-[10px] font-medium leading-none">Packages</span>
+        </button>
+    </nav>
+
+    <!-- ==========================================
+         MODALS
+         ========================================== -->
+
+    <!-- Wasooli Modal -->
+    <div id="modal-wasooli" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden items-end sm:items-center justify-center p-4">
+        <div class="bg-white rounded-[2rem] p-6 w-full max-w-sm shadow-2xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-slate-900">Record Wasooli</h3>
+                <button onclick="closeModal('modal-wasooli')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">Select Customer</label>
+                    <select id="wasooli-customer-select" class="mt-1 w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-semibold text-slate-900 outline-none"></select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">Amount Received (Rs.)</label>
+                    <input id="wasooli-amount-input" type="number" placeholder="e.g. 2000"
+                        class="mt-1 w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-lg font-bold text-emerald-600 outline-none">
+                </div>
+            </div>
+            <button onclick="submitWasooli()" class="w-full py-3.5 rounded-2xl bg-slate-900 text-white font-semibold text-sm shadow-md active:scale-95 transition-transform">
+                Confirm Wasooli
+            </button>
+        </div>
+    </div>
+
+    <!-- New Customer Modal -->
+    <div id="modal-new-customer" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden items-end sm:items-center justify-center p-4">
+        <div class="bg-white rounded-[2rem] p-6 w-full max-w-sm shadow-2xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-slate-900">New Khata Account</h3>
+                <button onclick="closeModal('modal-new-customer')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <input id="new-cust-name"  type="text"   placeholder="Full Name (e.g. Aslam Tailor)"       class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
+                <input id="new-cust-role"  type="text"   placeholder="Shop / Reference (e.g. G-9 Market)"  class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
+                <input id="new-cust-phone" type="tel"    placeholder="Mobile Number (03XX-XXXXXXX)"         class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
+                <input id="new-cust-bal"   type="number" placeholder="Opening Udhaar Balance (Rs.)" value="0" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
+            </div>
+            <button onclick="submitNewCustomer()" class="w-full py-3.5 rounded-2xl bg-slate-900 text-white font-semibold text-sm shadow-md active:scale-95 transition-transform">
+                Create Khata
+            </button>
+        </div>
+    </div>
+
+    <!-- New Product Modal -->
+    <div id="modal-new-product" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden items-end sm:items-center justify-center p-4">
+        <div class="bg-white rounded-[2rem] p-6 w-full max-w-sm shadow-2xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-slate-900">Add Product to Godown</h3>
+                <button onclick="closeModal('modal-new-product')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <input id="new-prod-name"  type="text"   placeholder="Item Name (e.g. National Masala)"    class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
+                <div class="grid grid-cols-2 gap-2">
+                    <select id="new-prod-cat" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium outline-none">
+                        <option value="Grain & Pulses">Daalein & Chawal</option>
+                        <option value="Ghee & Oil">Ghee & Oil</option>
+                        <option value="Tea & Dairy">Chai & Dairy</option>
+                    </select>
+                    <input id="new-prod-unit" type="text" placeholder="Unit (Pack / KG)" value="Pack" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <input id="new-prod-cost"  type="number" placeholder="Cost Price (Rs.)"  class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
+                    <input id="new-prod-sell"  type="number" placeholder="Sell Price (Rs.)"  class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
+                </div>
+                <input id="new-prod-stock" type="number" placeholder="Opening Stock Quantity" value="20" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
+            </div>
+            <button onclick="submitNewProduct()" class="w-full py-3.5 rounded-2xl bg-slate-900 text-white font-semibold text-sm shadow-md active:scale-95 transition-transform">
+                Save Product
+            </button>
+        </div>
+    </div>
+
+    <!-- Customer Detail / WhatsApp Reminder Modal -->
+    <div id="modal-customer-detail" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden items-end sm:items-center justify-center p-4">
+        <div class="bg-white rounded-[2rem] p-6 w-full max-w-sm shadow-2xl space-y-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-900" id="detail-cust-name">Customer</h3>
+                    <p class="text-xs text-slate-400" id="detail-cust-phone">+92 300 0000000</p>
+                </div>
+                <button onclick="closeModal('modal-customer-detail')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+            <div class="bg-slate-50 rounded-2xl p-4 space-y-2 border border-slate-100">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Roman Urdu WhatsApp Reminder</span>
+                <p class="text-xs text-slate-700 leading-relaxed" id="detail-wa-message"></p>
+            </div>
+            <div class="space-y-1.5 max-h-40 overflow-y-auto pr-1" id="detail-ledger-list"></div>
+            <div class="grid grid-cols-2 gap-2.5 pt-1">
+                <button onclick="copyReminderText()"
+                    class="py-3 rounded-xl bg-slate-100 text-slate-800 text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95">
+                    <span class="material-symbols-outlined text-[16px]">content_copy</span> Copy Text
+                </button>
+                <button onclick="sendWhatsAppReminder()"
+                    class="py-3 rounded-xl bg-emerald-600 text-white text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95">
+                    <span class="material-symbols-outlined text-[16px]">chat</span> Send Alert
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Digital Parchi (Receipt) Modal -->
+    <div id="modal-receipt" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden items-center justify-center p-4">
+        <div class="bg-white rounded-[2rem] p-6 w-full max-w-sm shadow-2xl text-center space-y-4">
+            <div class="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+                <span class="material-symbols-outlined text-3xl fill-icon">check_circle</span>
+            </div>
+            <div>
+                <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Madina Kiryana Store</span>
+                <h3 class="text-xl font-bold text-slate-900 mt-0.5" id="receipt-title">Sale Confirmed!</h3>
+            </div>
+            <div class="bg-slate-50 rounded-2xl p-4 text-left space-y-2 text-xs border border-slate-100" id="receipt-body"></div>
+            <div class="grid grid-cols-2 gap-2.5">
+                <button onclick="showToast('Sent to Thermal Printer!'); closeModal('modal-receipt')"
+                    class="py-3 rounded-xl bg-slate-100 text-slate-800 text-xs font-semibold flex items-center justify-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">print</span> Print Parchi
+                </button>
+                <button onclick="closeModal('modal-receipt')" class="py-3 rounded-xl bg-slate-900 text-white text-xs font-semibold">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Toast -->
+    <div id="global-toast"
+        class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-medium opacity-0 pointer-events-none transition-all duration-300 min-w-[260px] justify-center">
+        <span class="material-symbols-outlined text-emerald-400 text-[18px]">check_circle</span>
+        <span id="global-toast-text">Action completed</span>
+    </div>
+
+</div><!-- /app shell -->
+
+<!-- =============================================
+     JAVASCRIPT — Load order matters
+     ============================================= -->
+<script src="js/state.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/home.js"></script>
+<script src="js/stock.js"></script>
+<script src="js/pos.js"></script>
+<script src="js/udhaar.js"></script>
+<script src="js/packages.js"></script>
+<script src="js/reports.js"></script>
+<script src="js/utils.js"></script>
+
+</body>
+</html>
+
