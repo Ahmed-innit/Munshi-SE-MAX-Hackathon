@@ -1,6 +1,6 @@
 /* ============================================================
    Munshi AI — Application State Store
-   Central source of truth for all reactive data
+   Loaded with Official SRS §1.5 Dataset (Valid UUIDs & Paisa)
    ============================================================ */
 
 const state = {
@@ -14,7 +14,7 @@ const state = {
 
     // ---- POS State ----
     posCustomerMode: 'walkin',
-    posCustomerId: 2,
+    posCustomerId: '00000000-0000-4000-8000-000000000101', // Ali
     posPaymentMode: 'cash',
 
     // ---- Packages State ----
@@ -24,56 +24,51 @@ const state = {
     pkgPayMode: 'cash',
 
     // ---- KPI Counters ----
-    cashSalesToday: 38450,
-    wasooliToday: 18500,
-    nayaUdhaarToday: 6200,
-    walletBalance: 24850,
-    loadSalesToday: 14200,
-    loadProfitToday: 1180,
-    loadCountToday: 42,
+    cashSalesToday: 0,
+    wasooliToday: 0,
+    nayaUdhaarToday: 0,
+    walletBalance: 25000,
+    loadSalesToday: 0,
+    loadProfitToday: 0,
+    loadCountToday: 0,
 
-    // ---- AI Pending Confirmation ----
-    pendingAI: {
-        customerId: 2,
-        customerName: 'Bhai Tariq (Al-Madina Autos)',
-        amount: 500,
-        type: 'udhaar',
-        label: 'Udhaar Diya',
-        rawText: '"Bhai Tariq ko 500 rupay udhaar diya"'
-    },
+    // ---- AI Pending Confirmation (SRS TC-PAR-03) ----
+    pendingAI: null,
 
-    // ---- Customer Ledger ----
+    // ---- Customer Ledger (SRS Section 1.5 Seed Customers) ----
     customers: [
-        { id: 1, name: 'Chaudhry Bashir', role: 'Tailor Master',         phone: '0300-8541290', balance: 14800, limit: 20000, overdueDays: 34 },
-        { id: 2, name: 'Bhai Tariq',      role: 'Al-Madina Autos',       phone: '0301-8847291', balance:  6450, limit: 15000, overdueDays:  0 },
-        { id: 3, name: 'Rashid Khan',     role: 'Chai Dhabba',           phone: '0333-5129044', balance: 21200, limit: 25000, overdueDays:  0 },
-        { id: 4, name: 'Master Zahid',    role: 'Govt School Teacher',   phone: '0345-7821903', balance:  3200, limit: 10000, overdueDays:  0 }
+        { id: '00000000-0000-4000-8000-000000000101', name: 'Ali',             role: 'Regular Buyer',  phone: '0300-1111111', balance:     0, limit:  5000, overdueDays: 0 },
+        { id: '00000000-0000-4000-8000-000000000102', name: 'Ahmed',           role: 'Neighbor',       phone: '0300-2222222', balance:     0, limit:  2000, overdueDays: 0 },
+        { id: '00000000-0000-4000-8000-000000000103', name: 'Ahmed Khan',      role: 'Shop Regular',   phone: '0300-3333333', balance:     0, limit:  2000, overdueDays: 0 },
+        { id: '00000000-0000-4000-8000-000000000104', name: 'Bilal',           role: 'Student',        phone: '0300-4444444', balance:     0, limit:  1000, overdueDays: 0 },
+        { id: '00000000-0000-4000-8000-000000000105', name: 'Chaudhry Bashir', role: 'Tailor Master',  phone: '0300-8541290', balance: 14800, limit: 20000, overdueDays: 34 },
+        { id: '00000000-0000-4000-8000-000000000106', name: 'Bhai Tariq',      role: 'Al-Madina Autos',phone: '0301-8847291', balance:  6450, limit: 15000, overdueDays: 0 },
+        { id: '00000000-0000-4000-8000-000000000107', name: 'Rashid Khan',     role: 'Chai Dhabba',    phone: '0333-5129044', balance: 21200, limit: 25000, overdueDays: 0 },
+        { id: '00000000-0000-4000-8000-000000000108', name: 'Master Zahid',    role: 'Govt Teacher',   phone: '0345-7821903', balance:  3200, limit: 10000, overdueDays: 0 }
     ],
 
-    // ---- Product / Inventory ----
+    // ---- Product / Inventory (SRS Section 1.5 Seed Products) ----
     products: [
-        { id: 101, name: 'Mezan Banaspati Ghee (5L)',   category: 'Ghee & Oil',     unit: 'Tin',  cost: 2520, price: 2680, stock: 18,   minStock: 5  },
-        { id: 102, name: 'Tapal Danedar Tea (450g)',    category: 'Tea & Dairy',    unit: 'Pack', cost:  680, price:  740, stock: 3,    minStock: 10 },
-        { id: 103, name: 'Guard Basmati Rice (10kg)',   category: 'Grain & Pulses', unit: 'Bag',  cost: 3450, price: 3800, stock: 24,   minStock: 8  },
-        { id: 104, name: 'Dal Channa Special',          category: 'Grain & Pulses', unit: 'KG',   cost:  240, price:  275, stock: 4.5,  minStock: 15 },
-        { id: 105, name: "Olper's Milk (1L Pack)",      category: 'Tea & Dairy',    unit: 'Pack', cost:  270, price:  290, stock: 48,   minStock: 12 },
-        { id: 106, name: 'Cheeni White (Refined)',      category: 'Grain & Pulses', unit: 'KG',   cost:  132, price:  145, stock: 65,   minStock: 20 }
+        { id: '00000000-0000-4000-8000-000000000001', name: 'Basmati Chawal',       category: 'Grains',    unit: 'kg',     cost:  250, price:  300, stock: 20, minStock:  5 },
+        { id: '00000000-0000-4000-8000-000000000002', name: 'Aata',                 category: 'Flour',     unit: 'kg',     cost:  120, price:  150, stock: 50, minStock: 10 },
+        { id: '00000000-0000-4000-8000-000000000003', name: 'Cheeni',               category: 'Sugar',     unit: 'kg',     cost:  160, price:  180, stock: 30, minStock:  5 },
+        { id: '00000000-0000-4000-8000-000000000004', name: 'Doodh',                category: 'Dairy',     unit: 'litre',  cost:  180, price:  200, stock: 20, minStock:  5 },
+        { id: '00000000-0000-4000-8000-000000000005', name: 'Coke bottle',          category: 'Beverage',  unit: 'piece',  cost:   80, price:  100, stock: 48, minStock: 12 },
+        { id: '00000000-0000-4000-8000-000000000006', name: 'Sabun packet',         category: 'Household', unit: 'packet', cost:  100, price:  120, stock: 30, minStock:  6 },
+        { id: '00000000-0000-4000-8000-000000000007', name: 'Dal Channa Special',   category: 'Grains',    unit: 'kg',     cost:  240, price:  275, stock: 30, minStock: 15 },
+        { id: '00000000-0000-4000-8000-000000000008', name: 'Mezan Banaspati Ghee', category: 'Ghee',      unit: 'tin',    cost: 2520, price: 2680, stock: 18, minStock:  5 },
+        { id: '00000000-0000-4000-8000-000000000009', name: 'Tapal Danedar Tea',    category: 'Tea',       unit: 'pack',   cost:  680, price:  740, stock: 15, minStock: 10 },
+        { id: '00000000-0000-4000-8000-000000000010', name: "Olper's Milk",         category: 'Dairy',     unit: 'pack',   cost:  270, price:  290, stock: 48, minStock: 12 }
     ],
 
     // ---- POS Cart ----
     cart: [
-        { productId: 102, name: 'Tapal Danedar Tea (450g)',   price: 740, qty: 2, unit: 'Pack' },
-        { productId: 106, name: 'Cheeni White (Refined)',      price: 145, qty: 2, unit: 'KG'   },
-        { productId: 105, name: "Olper's Milk (1L Pack)",      price: 290, qty: 1, unit: 'Pack' }
+        { productId: '00000000-0000-4000-8000-000000000001', name: 'Basmati Chawal', price: 300, qty: 2, unit: 'kg' },
+        { productId: '00000000-0000-4000-8000-000000000003', name: 'Cheeni',         price: 180, qty: 1, unit: 'kg' }
     ],
 
     // ---- Recent Transactions Feed ----
-    transactions: [
-        { id: 1, title: '2kg Cheeni, Tapal Tea, Olpers',          subtitle: 'Naqad Bikri • 10m ago',           amount: 1320, type: 'sale'    },
-        { id: 2, title: 'Bhai Tariq (Al-Madina)',                  subtitle: 'Wasooli Received • 25m ago',      amount: 2000, type: 'wasooli' },
-        { id: 3, title: 'Chaudhry Bashir',                         subtitle: 'Udhaar Darj • 1h ago',            amount:  850, type: 'udhaar'  },
-        { id: 4, title: 'Jazz Weekly Mega (0301-5582910)',         subtitle: 'Easyload • +Rs. 38 Profit',       amount:  420, type: 'sale'    }
-    ],
+    transactions: [],
 
     // ---- Telecom Packages ----
     telecomPackages: {
@@ -97,4 +92,3 @@ const state = {
         ]
     }
 };
-

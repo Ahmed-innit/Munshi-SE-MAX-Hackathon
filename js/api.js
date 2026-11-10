@@ -211,16 +211,18 @@ const api = {
     if (this.isFlushing) return;
     this.isFlushing = true;
 
+    let lastResult = { ok: true, status: 200, data: { status: 'ok' } };
+
     try {
       const isOnline = await this.checkHealth();
       if (!isOnline) {
         this.updateOnlineBadge(false);
-        return;
+        return { ok: true, status: 200, offline: true, data: { status: 'queued' } };
       }
 
       let queue = this.getOutbox();
       const pendingItems = queue.filter(item => item.status === 'PENDING');
-      if (pendingItems.length === 0) return;
+      if (pendingItems.length === 0) return lastResult;
 
       this.updateOnlineBadge(true);
 
@@ -246,11 +248,13 @@ const api = {
           if (res.ok && data.status === 'ok') {
             item.status = 'SYNCED';
             item.lastError = null;
+            lastResult = { ok: true, status: 200, data };
           } else if (data.status === 'rejected') {
             // Server rejection (e.g. NEGATIVE_STOCK, UNKNOWN_CUSTOMER):
             // Mark NEEDS_REVIEW, do not alter client data, notify user
             item.status = 'NEEDS_REVIEW';
             item.lastError = `${data.code}: ${data.reason}`;
+            lastResult = { ok: false, status: 400, data };
             console.warn(`[Sync Outbox] Operation ${item.operationId} rejected: ${data.reason}`);
             if (typeof showToast === 'function') {
               showToast(`Needs Review: ${data.reason || data.code}`);
@@ -259,12 +263,14 @@ const api = {
             // Transient 5xx or server error: keep PENDING for retry
             item.status = 'PENDING';
             item.lastError = data.message || 'Server error';
+            lastResult = { ok: false, status: res.status || 500, data };
             break;
           }
         } catch (netErr) {
           // Network disconnected during sync: keep PENDING and resume later
           item.status = 'PENDING';
           item.lastError = netErr.message;
+          lastResult = { ok: false, status: 0, error: netErr.message };
           state.isOnline = false;
           this.updateOnlineBadge(false);
           break;
@@ -279,6 +285,7 @@ const api = {
       await this.loadStock();
       await this.loadBalances();
       if (typeof renderAll === 'function') renderAll();
+      return lastResult;
     } finally {
       this.isFlushing = false;
       this.updateOnlineBadge(state.isOnline);

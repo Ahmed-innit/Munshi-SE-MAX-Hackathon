@@ -5,6 +5,7 @@ import healthRouter from './routes/health';
 import syncRouter from './routes/sync';
 import balancesRouter from './routes/balances';
 import stockRouter from './routes/stock';
+import parseRouter from './routes/parse';
 
 export const app = express();
 
@@ -59,11 +60,13 @@ app.use('/api', healthRouter);
 app.use('/api', syncRouter);
 app.use('/api', balancesRouter);
 app.use('/api', stockRouter);
+app.use('/api', parseRouter);
 
 app.use(healthRouter);
 app.use(syncRouter);
 app.use(balancesRouter);
 app.use(stockRouter);
+app.use(parseRouter);
 
 // Global error handler: Return JSON, never stack traces
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
