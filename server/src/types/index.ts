@@ -1,3 +1,20 @@
+export type OperationType =
+  | 'PRODUCT_UPSERT'
+  | 'CUSTOMER_UPSERT'
+  | 'STOCK_PURCHASE'
+  | 'SALE_CASH'
+  | 'SALE_UDHAAR'
+  | 'PAYMENT_RECEIVED'
+  | 'RETURN_ENTRY'
+  | 'REVERSAL';
+
+export type RejectionCode =
+  | 'INVALID_DATA'
+  | 'UNKNOWN_CUSTOMER'
+  | 'UNKNOWN_PRODUCT'
+  | 'NEGATIVE_STOCK'
+  | 'ALREADY_REVERSED';
+
 export type StockMovementType =
   | 'PURCHASE'
   | 'SALE'
@@ -18,7 +35,7 @@ export interface Product {
   purchasePricePaisa: number;
   salePricePaisa: number;
   lowStockThresholdBase: number;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface Customer {
@@ -27,7 +44,7 @@ export interface Customer {
   phone: string;
   openingBalancePaisa: number;
   creditLimitPaisa: number;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface SaleLine {
@@ -98,17 +115,30 @@ export type SyncSuccessResponse = {
   duplicate: boolean;
 };
 
-export type SyncRejectionCode =
-  | 'unknown customer'
-  | 'unknown product'
-  | 'invalid data'
-  | 'stock would go negative';
-
 export type SyncRejectionResponse = {
   status: 'rejected';
   operationId: string;
+  code: RejectionCode;
   reason: string;
-  code: SyncRejectionCode;
 };
 
 export type SyncResponse = SyncSuccessResponse | SyncRejectionResponse;
+
+export interface CustomerBalance {
+  customerId: string;
+  customerName: string;
+  phone: string;
+  openingBalancePaisa: number;
+  debitPaisa: number;
+  creditPaisa: number;
+  balancePaisa: number;
+}
+
+export interface ProductStock {
+  productId: string;
+  productName: string;
+  baseUnit: string;
+  currentStock: number;
+  lowStockThresholdBase: number;
+  isLowStock: boolean;
+}

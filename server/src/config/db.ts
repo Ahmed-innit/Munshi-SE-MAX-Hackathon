@@ -4,7 +4,6 @@ import path from 'path';
 
 // Load .env relative to server root
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-// Also ensure process.env is read if dotenv was called at process start
 dotenv.config();
 
 const connectionString = process.env.DATABASE_URL;
@@ -13,11 +12,14 @@ if (!connectionString) {
   throw new Error('DATABASE_URL is not set in environment or server/.env');
 }
 
+const dbSchema = process.env.DB_SCHEMA || (process.env.NODE_ENV === 'test' ? 'test' : undefined);
+
 export const pool = new Pool({
   connectionString,
   ssl: {
     rejectUnauthorized: false
-  }
+  },
+  ...(dbSchema ? { options: `-c search_path=${dbSchema},public` } : {})
 });
 
 export const query = <T extends QueryResultRow = any>(

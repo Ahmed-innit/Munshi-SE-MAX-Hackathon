@@ -49,18 +49,31 @@ function switchTab(tab) {
     renderAll();
 }
 
-function toggleSyncMode() {
-    state.isOnline = !state.isOnline;
-    const dot = document.getElementById('sync-dot');
-    const txt = document.getElementById('sync-text');
-    if (state.isOnline) {
-        dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
-        txt.innerText  = 'Synced';
-        showToast('Cloud Sync Active • All entries backed up');
+async function toggleSyncMode() {
+    if (window.api) {
+        showToast('Checking connection to Munshi server...');
+        const isOnline = await api.checkHealth();
+        if (isOnline) {
+            await api.loadStock();
+            await api.loadBalances();
+            renderAll();
+            showToast('Connected to Munshi backend • Database live');
+        } else {
+            showToast('Cannot reach server • Working in offline mode');
+        }
     } else {
-        dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse';
-        txt.innerText  = 'Offline Ready';
-        showToast('Offline Mode • Saving entries on device');
+        state.isOnline = !state.isOnline;
+        const dot = document.getElementById('sync-dot');
+        const txt = document.getElementById('sync-text');
+        if (state.isOnline) {
+            dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
+            txt.innerText  = 'Synced';
+            showToast('Cloud Sync Active • All entries backed up');
+        } else {
+            dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse';
+            txt.innerText  = 'Offline Ready';
+            showToast('Offline Mode • Saving entries on device');
+        }
     }
 }
 

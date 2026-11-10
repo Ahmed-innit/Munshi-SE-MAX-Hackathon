@@ -133,19 +133,69 @@ function renderPendingAICard() {
 function confirmPendingAI() {
     if (!state.pendingAI) return;
     const p = state.pendingAI;
-    const c = state.customers.find(x => x.id === p.customerId);
+    const c = state.customers.find(x => String(x.id) === String(p.customerId));
 
     if (p.type === 'udhaar') {
         state.nayaUdhaarToday += p.amount;
         if (c) c.balance += p.amount;
-        state.transactions.unshift({ id: Date.now(), title: p.customerName, subtitle: 'Voice AI Udhaar • Just now',   amount: p.amount, type: 'udhaar'  });
+        state.transactions.unshift({
+            id: window.api ? api.newId() : Date.now(),
+            title: p.customerName,
+            subtitle: 'Voice AI Udhaar • Just now',
+            amount: p.amount,
+            type: 'udhaar'
+        });
     } else if (p.type === 'wasooli') {
         state.wasooliToday += p.amount;
         if (c) c.balance = Math.max(0, c.balance - p.amount);
-        state.transactions.unshift({ id: Date.now(), title: p.customerName, subtitle: 'Voice AI Wasooli • Just now', amount: p.amount, type: 'wasooli' });
+        state.transactions.unshift({
+            id: window.api ? api.newId() : Date.now(),
+            title: p.customerName,
+            subtitle: 'Voice AI Wasooli • Just now',
+            amount: p.amount,
+            type: 'wasooli'
+        });
     } else {
         state.cashSalesToday += p.amount;
-        state.transactions.unshift({ id: Date.now(), title: p.customerName, subtitle: 'Voice AI Cash Sale • Just now', amount: p.amount, type: 'sale' });
+        state.transactions.unshift({
+            id: window.api ? api.newId() : Date.now(),
+            title: p.customerName,
+            subtitle: 'Voice AI Cash Sale • Just now',
+            amount: p.amount,
+            type: 'sale'
+        });
+    }
+
+    if (window.api) {
+        if (p.type === 'wasooli' && c) {
+            api.syncOperation('PAYMENT_RECEIVED', {
+                id: api.newId(),
+                customerId: String(c.id),
+                amountPaisa: Math.round(p.amount * 100),
+                note: 'Voice AI Wasooli'
+            }).then(() => api.loadBalances()).catch(err => console.warn('Wasooli sync failed:', err));
+        } else if (state.products && state.products.length > 0) {
+            const prod = state.products[0];
+            const isUdhaar = p.type === 'udhaar';
+            const opType = isUdhaar ? 'SALE_UDHAAR' : 'SALE_CASH';
+            api.syncOperation(opType, {
+                id: api.newId(),
+                customerId: isUdhaar && c ? String(c.id) : null,
+                lines: [{
+                    productId: String(prod.id),
+                    quantityBase: 1,
+                    unitPricePaisa: Math.round(p.amount * 100),
+                    totalPaisa: Math.round(p.amount * 100),
+                    productName: prod.name
+                }],
+                totalPaisa: Math.round(p.amount * 100),
+                paymentMethod: isUdhaar ? 'UDHAAR' : 'CASH',
+                createdAt: new Date().toISOString()
+            }).then(() => {
+                api.loadStock();
+                api.loadBalances();
+            }).catch(err => console.warn('Sale sync error:', err));
+        }
     }
 
     state.pendingAI = null;

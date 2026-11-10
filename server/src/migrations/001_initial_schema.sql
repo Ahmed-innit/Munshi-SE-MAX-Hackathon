@@ -1,5 +1,6 @@
 -- Munshi Database Schema
 -- Migration: 001_initial_schema.sql
+-- Idempotent: Can be run multiple times safely.
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -86,11 +87,47 @@ CREATE TABLE IF NOT EXISTS audit_log (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Indexes for performance and foreign-key querying
+-- Enable Row Level Security (RLS) on all tables
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stock_movements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ledger_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE processed_operations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY;
+
+-- Default permissive RLS policies for table owners/service role
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'products' AND policyname = 'products_all_access') THEN
+        CREATE POLICY products_all_access ON products FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'customers' AND policyname = 'customers_all_access') THEN
+        CREATE POLICY customers_all_access ON customers FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'sales' AND policyname = 'sales_all_access') THEN
+        CREATE POLICY sales_all_access ON sales FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'stock_movements' AND policyname = 'stock_movements_all_access') THEN
+        CREATE POLICY stock_movements_all_access ON stock_movements FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'ledger_entries' AND policyname = 'ledger_entries_all_access') THEN
+        CREATE POLICY ledger_entries_all_access ON ledger_entries FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'processed_operations' AND policyname = 'processed_operations_all_access') THEN
+        CREATE POLICY processed_operations_all_access ON processed_operations FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'audit_log' AND policyname = 'audit_log_all_access') THEN
+        CREATE POLICY audit_log_all_access ON audit_log FOR ALL USING (true) WITH CHECK (true);
+    END IF;
+END $$;
+
+-- Indexes for performance and queries
 CREATE INDEX IF NOT EXISTS idx_stock_movements_product_id ON stock_movements(product_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_reference_id ON stock_movements(reference_id);
 CREATE INDEX IF NOT EXISTS idx_ledger_entries_customer_id ON ledger_entries(customer_id);
 CREATE INDEX IF NOT EXISTS idx_ledger_entries_sale_id ON ledger_entries(sale_id);
+CREATE INDEX IF NOT EXISTS idx_ledger_entries_reversal_of_id ON ledger_entries(reversal_of_id);
 CREATE INDEX IF NOT EXISTS idx_sales_customer_id ON sales(customer_id);
 CREATE INDEX IF NOT EXISTS idx_audit_log_operation_id ON audit_log(operation_id);
 

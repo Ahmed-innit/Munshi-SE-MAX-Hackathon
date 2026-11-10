@@ -1,5 +1,9 @@
+process.env.NODE_ENV = 'test';
+
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { Server } from 'http';
+import fs from 'fs';
+import path from 'path';
 import app from '../src/app';
 import { pool } from '../src/config/db';
 import crypto from 'crypto';
@@ -8,7 +12,20 @@ let server: Server;
 let baseUrl: string;
 
 beforeAll(async () => {
-  // Start server on an ephemeral port
+  // 1. Prepare test schema to ensure real data is NEVER written to
+  const client = await pool.connect();
+  try {
+    await client.query('CREATE SCHEMA IF NOT EXISTS test;');
+    const migrationSql = fs.readFileSync(
+      path.resolve(__dirname, '../src/migrations/001_initial_schema.sql'),
+      'utf8'
+    );
+    await client.query(migrationSql);
+  } finally {
+    client.release();
+  }
+
+  // 2. Start ephemeral test server
   await new Promise<void>((resolve) => {
     server = app.listen(0, () => {
       const address = server.address();
@@ -24,10 +41,18 @@ afterAll(async () => {
   if (server) {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
+  // Clean up test schema
+  try {
+    const client = await pool.connect();
+    await client.query('DROP SCHEMA IF EXISTS test CASCADE;');
+    client.release();
+  } catch (err) {
+    console.error('Error cleaning up test schema:', err);
+  }
   await pool.end();
 });
 
-describe('Munshi Kiryana Sync & Health API', { timeout: 30000 }, () => {
+describe('Munshi Kiryana Sync & Endpoints API', { timeout: 35000 }, () => {
   // Helper to create a product in DB
   async function createProduct(initialStock = 0, name = 'Test Product') {
     const productId = crypto.randomUUID();
@@ -50,12 +75,12 @@ describe('Munshi Kiryana Sync & Health API', { timeout: 30000 }, () => {
   }
 
   // Helper to create a customer in DB
-  async function createCustomer(name = 'Test Customer') {
+  async function createCustomer(name = 'Test Customer', openingBalance = 0) {
     const customerId = crypto.randomUUID();
     await pool.query(
       `INSERT INTO customers (id, name, phone, opening_balance_paisa, credit_limit_paisa)
        VALUES ($1, $2, $3, $4, $5)`,
-      [customerId, name, '03001234567', 0, 500000]
+      [customerId, name, '03001234567', openingBalance, 500000]
     );
     return customerId;
   }
@@ -69,454 +94,590 @@ describe('Munshi Kiryana Sync & Health API', { timeout: 30000 }, () => {
     return parseInt(res.rows[0].current_stock, 10);
   }
 
-  describe('GET /api/health', () => {
-    it('should return 200 with database connected status', async () => {
-      const res = await fetch(`${baseUrl}/api/health`);
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expect(data.status).toBe('ok');
-      expect(data.database).toBe('connected');
-      expect(data.timestamp).toBeDefined();
-    });
+  // Helper to get customer balance from ledger_entries
+  async function getCustomerBalance(customerId: string): Promise<number> {
+    const res = await pool.query(
+      `SELECT 
+        c.opening_balance_paisa + 
+        COALESCE(SUM(CASE WHEN l.direction = 'DEBIT' THEN l.amount_paisa ELSE -l.amount_paisa END), 0) AS balance
+       FROM customers c
+       LEFT JOIN ledger_entries l ON l.customer_id = c.id
+       WHERE c.id = $1
+       GROUP BY c.id, c.opening_balance_paisa`,
+      [customerId]
+    );
+    return parseInt(res.rows[0].balance, 10);
+  }
+
+  // -------------------------------------------------------------
+  // HEALTH CHECK
+  // -------------------------------------------------------------
+  it('GET /api/health: should return 200 with database connected status', async () => {
+    const res = await fetch(`${baseUrl}/api/health`);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.status).toBe('ok');
+    expect(data.database).toBe('connected');
+    expect(data.timestamp).toBeDefined();
   });
 
-  describe('POST /api/sync', () => {
-    // 1. FIRST SYNC
-    it('1. first sync: should successfully process and persist a sale, stock movement, and ledger entry in one transaction', async () => {
-      const productId = await createProduct(10, 'Basmati Rice 1kg');
-      const customerId = await createCustomer('Haji Rafiq');
-      const operationId = crypto.randomUUID();
-      const saleId = crypto.randomUUID();
-      const movementId = crypto.randomUUID();
-      const ledgerEntryId = crypto.randomUUID();
+  // -------------------------------------------------------------
+  // TEST 1: FIRST SYNC
+  // -------------------------------------------------------------
+  it('1. first sync: should successfully process and persist a sale, stock movement, and audit log', async () => {
+    const productId = await createProduct(10, 'Basmati Rice 1kg');
+    const operationId = crypto.randomUUID();
+    const saleId = crypto.randomUUID();
 
-      const payload = {
-        sale: {
-          id: saleId,
-          customerId,
-          lines: [
-            {
-              productId,
-              quantityBase: 3,
-              unitPricePaisa: 12000,
-              totalPaisa: 36000
-            }
-          ],
-          totalPaisa: 36000,
-          paymentMethod: 'UDHAAR'
-        },
-        stockMovements: [
+    const payload = {
+      id: saleId,
+      lines: [
+        {
+          productId,
+          quantityBase: 3,
+          unitPricePaisa: 12000,
+          totalPaisa: 36000
+        }
+      ],
+      totalPaisa: 36000,
+      paymentMethod: 'CASH'
+    };
+
+    const res = await fetch(`${baseUrl}/api/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operationId,
+        type: 'SALE_CASH',
+        payload,
+        createdAt: new Date().toISOString()
+      })
+    });
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toEqual({
+      status: 'ok',
+      operationId,
+      duplicate: false
+    });
+
+    // Verify row exists in sales
+    const saleRow = await pool.query('SELECT * FROM sales WHERE id = $1', [saleId]);
+    expect(saleRow.rows.length).toBe(1);
+
+    // Verify row exists in stock_movements (signed: -3)
+    const moveRow = await pool.query('SELECT * FROM stock_movements WHERE reference_id = $1', [saleId]);
+    expect(moveRow.rows.length).toBe(1);
+    expect(moveRow.rows[0].quantity_base).toBe(-3);
+
+    // Verify processed_operations
+    const opRow = await pool.query('SELECT * FROM processed_operations WHERE operation_id = $1', [operationId]);
+    expect(opRow.rows.length).toBe(1);
+  });
+
+  // -------------------------------------------------------------
+  // TEST 2: REPLAY OF THE SAME OPERATION ID
+  // -------------------------------------------------------------
+  it('2. replay of the same operationId: returns duplicate: true and leaves exactly one row in every table', async () => {
+    const productId = await createProduct(10, 'Cooking Oil 1L');
+    const operationId = crypto.randomUUID();
+    const saleId = crypto.randomUUID();
+
+    const syncBody = {
+      operationId,
+      type: 'SALE_CASH',
+      payload: {
+        id: saleId,
+        lines: [
           {
-            id: movementId,
             productId,
-            type: 'SALE',
-            quantityBase: 3,
-            unitCostPaisa: 12000,
-            referenceId: saleId,
-            reason: 'Counter sale'
+            quantityBase: 2,
+            unitPricePaisa: 50000,
+            totalPaisa: 100000
           }
         ],
-        ledgerEntry: {
-          id: ledgerEntryId,
-          customerId,
-          type: 'UDHAAR',
-          amountPaisa: 36000,
-          direction: 'DEBIT',
-          note: 'Udhaar sale'
-        }
-      };
+        totalPaisa: 100000,
+        paymentMethod: 'CASH'
+      },
+      createdAt: new Date().toISOString()
+    };
 
-      const res = await fetch(`${baseUrl}/api/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          operationId,
-          type: 'SALE',
-          payload,
-          createdAt: new Date().toISOString()
-        })
-      });
+    // First attempt
+    const firstRes = await fetch(`${baseUrl}/api/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(syncBody)
+    });
+    expect(firstRes.status).toBe(200);
+    const firstData = await firstRes.json();
+    expect(firstData.duplicate).toBe(false);
 
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expect(data).toEqual({
-        status: 'ok',
-        operationId,
-        duplicate: false
-      });
+    // Snapshot counts
+    const salesBefore = (await pool.query('SELECT COUNT(*) FROM sales WHERE id = $1', [saleId])).rows[0].count;
+    const movementsBefore = (await pool.query('SELECT COUNT(*) FROM stock_movements WHERE reference_id = $1', [saleId])).rows[0].count;
+    const opsBefore = (await pool.query('SELECT COUNT(*) FROM processed_operations WHERE operation_id = $1', [operationId])).rows[0].count;
 
-      // Verify Sale in database
-      const saleRow = await pool.query('SELECT * FROM sales WHERE id = $1', [saleId]);
-      expect(saleRow.rows.length).toBe(1);
-      expect(saleRow.rows[0].customer_id).toBe(customerId);
-      expect(saleRow.rows[0].total_paisa).toBe('36000');
-      expect(saleRow.rows[0].payment_method).toBe('UDHAAR');
-
-      // Verify Stock Movement in database (signed by type: SALE is negative)
-      const moveRow = await pool.query('SELECT * FROM stock_movements WHERE id = $1', [movementId]);
-      expect(moveRow.rows.length).toBe(1);
-      expect(moveRow.rows[0].product_id).toBe(productId);
-      expect(moveRow.rows[0].quantity_base).toBe(-3);
-      expect(moveRow.rows[0].sync_status).toBe('SYNCED');
-
-      // Verify Stock reduced from 10 to 7
-      const newStock = await getCurrentStock(productId);
-      expect(newStock).toBe(7);
-
-      // Verify Ledger Entry in database
-      const ledgerRow = await pool.query('SELECT * FROM ledger_entries WHERE id = $1', [ledgerEntryId]);
-      expect(ledgerRow.rows.length).toBe(1);
-      expect(ledgerRow.rows[0].customer_id).toBe(customerId);
-      expect(ledgerRow.rows[0].amount_paisa).toBe('36000');
-      expect(ledgerRow.rows[0].direction).toBe('DEBIT');
-      expect(ledgerRow.rows[0].sync_status).toBe('SYNCED');
-
-      // Verify processed_operations
-      const procRow = await pool.query('SELECT * FROM processed_operations WHERE operation_id = $1', [operationId]);
-      expect(procRow.rows.length).toBe(1);
-      expect(procRow.rows[0].type).toBe('SALE');
-
-      // Verify audit_log
-      const auditRow = await pool.query('SELECT * FROM audit_log WHERE operation_id = $1', [operationId]);
-      expect(auditRow.rows.length).toBeGreaterThan(0);
+    // Second attempt (replay)
+    const replayRes = await fetch(`${baseUrl}/api/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(syncBody)
+    });
+    expect(replayRes.status).toBe(200);
+    const replayData = await replayRes.json();
+    expect(replayData).toEqual({
+      status: 'ok',
+      operationId,
+      duplicate: true
     });
 
-    // 2. REPLAY OF THE SAME OPERATION ID (IDEMPOTENCY)
-    it('2. replay of the same operationId: should return duplicate: true and insert nothing new', async () => {
-      const productId = await createProduct(10, 'Cooking Oil 1L');
-      const operationId = crypto.randomUUID();
-      const saleId = crypto.randomUUID();
+    // Exactly one row remains in each table
+    const salesAfter = (await pool.query('SELECT COUNT(*) FROM sales WHERE id = $1', [saleId])).rows[0].count;
+    const movementsAfter = (await pool.query('SELECT COUNT(*) FROM stock_movements WHERE reference_id = $1', [saleId])).rows[0].count;
+    const opsAfter = (await pool.query('SELECT COUNT(*) FROM processed_operations WHERE operation_id = $1', [operationId])).rows[0].count;
 
-      const syncBody = {
-        operationId,
-        type: 'SALE',
-        payload: {
-          id: saleId,
-          lines: [
-            {
-              productId,
-              quantityBase: 2,
-              unitPricePaisa: 50000,
-              totalPaisa: 100000
-            }
-          ],
-          totalPaisa: 100000,
-          paymentMethod: 'CASH'
-        },
-        createdAt: new Date().toISOString()
-      };
+    expect(salesAfter).toBe('1');
+    expect(movementsAfter).toBe('1');
+    expect(opsAfter).toBe('1');
+    expect(salesAfter).toBe(salesBefore);
+    expect(movementsAfter).toBe(movementsBefore);
+  });
 
-      // First sync
-      const firstRes = await fetch(`${baseUrl}/api/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(syncBody)
-      });
-      expect(firstRes.status).toBe(200);
-      const firstData = await firstRes.json();
-      expect(firstData.duplicate).toBe(false);
+  // -------------------------------------------------------------
+  // TEST 3: NEGATIVE_STOCK REJECTION
+  // -------------------------------------------------------------
+  it('3. NEGATIVE_STOCK rejection: leaves nothing partly saved', async () => {
+    const productId = await createProduct(1, 'Chawal');
+    const operationId = crypto.randomUUID();
+    const saleId = crypto.randomUUID();
 
-      // Snapshot row counts
-      const salesCountBefore = (await pool.query('SELECT COUNT(*) FROM sales WHERE id = $1', [saleId])).rows[0].count;
-      const movementsCountBefore = (await pool.query('SELECT COUNT(*) FROM stock_movements WHERE reference_id = $1', [saleId])).rows[0].count;
-      const stockBefore = await getCurrentStock(productId);
+    // Available stock is 1; attempt to sell 2
+    const syncBody = {
+      operationId,
+      type: 'SALE_CASH',
+      payload: {
+        id: saleId,
+        lines: [
+          {
+            productId,
+            quantityBase: 2,
+            unitPricePaisa: 25000,
+            totalPaisa: 50000
+          }
+        ],
+        totalPaisa: 50000,
+        paymentMethod: 'CASH'
+      },
+      createdAt: new Date().toISOString()
+    };
 
-      // Replay identical operationId
-      const replayRes = await fetch(`${baseUrl}/api/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(syncBody)
-      });
-
-      expect(replayRes.status).toBe(200);
-      const replayData = await replayRes.json();
-      expect(replayData).toEqual({
-        status: 'ok',
-        operationId,
-        duplicate: true
-      });
-
-      // Verify nothing new was created
-      const salesCountAfter = (await pool.query('SELECT COUNT(*) FROM sales WHERE id = $1', [saleId])).rows[0].count;
-      const movementsCountAfter = (await pool.query('SELECT COUNT(*) FROM stock_movements WHERE reference_id = $1', [saleId])).rows[0].count;
-      const stockAfter = await getCurrentStock(productId);
-
-      expect(salesCountAfter).toBe(salesCountBefore);
-      expect(movementsCountAfter).toBe(movementsCountBefore);
-      expect(stockAfter).toBe(stockBefore);
+    const res = await fetch(`${baseUrl}/api/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(syncBody)
     });
 
-    // 3. NEGATIVE STOCK REJECTION
-    it('3. negative stock rejection: should reject when a sale would take stock below zero', async () => {
-      // Product has 1 kg in stock
-      const productId = await createProduct(1, 'Chawal');
-      const operationId = crypto.randomUUID();
-      const saleId = crypto.randomUUID();
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.status).toBe('rejected');
+    expect(data.operationId).toBe(operationId);
+    expect(data.code).toBe('NEGATIVE_STOCK');
+    expect(data.reason).toMatch(/stock mein sirf 1/i);
 
-      // Client attempts to sell 2 kg
-      const syncBody = {
-        operationId,
-        type: 'SALE',
+    // Verify nothing partly saved
+    const saleCheck = await pool.query('SELECT * FROM sales WHERE id = $1', [saleId]);
+    expect(saleCheck.rows.length).toBe(0);
+
+    const moveCheck = await pool.query('SELECT * FROM stock_movements WHERE reference_id = $1', [saleId]);
+    expect(moveCheck.rows.length).toBe(0);
+
+    const opCheck = await pool.query('SELECT * FROM processed_operations WHERE operation_id = $1', [operationId]);
+    expect(opCheck.rows.length).toBe(0);
+
+    // Stock unchanged
+    const stock = await getCurrentStock(productId);
+    expect(stock).toBe(1);
+  });
+
+  // -------------------------------------------------------------
+  // TEST 4: UNKNOWN CUSTOMER & UNKNOWN PRODUCT REJECTIONS
+  // -------------------------------------------------------------
+  it('4. unknown customer and unknown product rejections', async () => {
+    const validProductId = await createProduct(10, 'Ghee 1L');
+    const nonExistentCustomerId = crypto.randomUUID();
+    const nonExistentProductId = crypto.randomUUID();
+
+    // 4a: Unknown Customer
+    const custOpId = crypto.randomUUID();
+    const custRes = await fetch(`${baseUrl}/api/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operationId: custOpId,
+        type: 'SALE_UDHAAR',
         payload: {
-          id: saleId,
-          lines: [
-            {
-              productId,
-              quantityBase: 2, // Stock is only 1!
-              unitPricePaisa: 25000,
-              totalPaisa: 50000
-            }
-          ],
-          totalPaisa: 50000,
-          paymentMethod: 'CASH'
-        },
-        createdAt: new Date().toISOString()
-      };
-
-      const res = await fetch(`${baseUrl}/api/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(syncBody)
-      });
-
-      expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data.status).toBe('rejected');
-      expect(data.operationId).toBe(operationId);
-      expect(data.code).toBe('stock would go negative');
-      expect(data.reason).toMatch(/stock mein sirf 1 kg hai/i);
-
-      // Verify nothing was persisted
-      const saleCheck = await pool.query('SELECT * FROM sales WHERE id = $1', [saleId]);
-      expect(saleCheck.rows.length).toBe(0);
-
-      const opCheck = await pool.query('SELECT * FROM processed_operations WHERE operation_id = $1', [operationId]);
-      expect(opCheck.rows.length).toBe(0);
-
-      // Stock remains untouched at 1 kg
-      const stock = await getCurrentStock(productId);
-      expect(stock).toBe(1);
-    });
-
-    // 4. UNKNOWN CUSTOMER REJECTION
-    it('4. unknown customer rejection: should reject when referencing a non-existent customer', async () => {
-      const productId = await createProduct(10, 'Sugar 1kg');
-      const nonExistentCustomerId = crypto.randomUUID();
-      const operationId = crypto.randomUUID();
-      const saleId = crypto.randomUUID();
-
-      const syncBody = {
-        operationId,
-        type: 'SALE',
-        payload: {
-          id: saleId,
+          id: crypto.randomUUID(),
           customerId: nonExistentCustomerId,
-          lines: [
-            {
-              productId,
-              quantityBase: 1,
-              unitPricePaisa: 15000,
-              totalPaisa: 15000
-            }
-          ],
-          totalPaisa: 15000,
+          lines: [{ productId: validProductId, quantityBase: 1, unitPricePaisa: 50000, totalPaisa: 50000 }],
+          totalPaisa: 50000,
           paymentMethod: 'UDHAAR'
         },
         createdAt: new Date().toISOString()
-      };
-
-      const res = await fetch(`${baseUrl}/api/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(syncBody)
-      });
-
-      expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data.status).toBe('rejected');
-      expect(data.operationId).toBe(operationId);
-      expect(data.code).toBe('unknown customer');
-      expect(data.reason).toMatch(new RegExp(nonExistentCustomerId, 'i'));
-
-      // Verify no records created
-      const saleCheck = await pool.query('SELECT * FROM sales WHERE id = $1', [saleId]);
-      expect(saleCheck.rows.length).toBe(0);
-
-      const opCheck = await pool.query('SELECT * FROM processed_operations WHERE operation_id = $1', [operationId]);
-      expect(opCheck.rows.length).toBe(0);
-
-      // Stock remains untouched at 10
-      const stock = await getCurrentStock(productId);
-      expect(stock).toBe(10);
+      })
     });
 
-    // 5. ATOMIC ROLLBACK
-    it('5. atomic rollback: if any part fails, nothing should be saved to the database', async () => {
-      // Product 1 has sufficient stock (10), Product 2 does NOT exist (unknown product)
-      const validProductId = await createProduct(10, 'Atta 10kg');
-      const invalidProductId = crypto.randomUUID(); // Does not exist
-      const operationId = crypto.randomUUID();
-      const saleId = crypto.randomUUID();
+    expect(custRes.status).toBe(400);
+    const custData = await custRes.json();
+    expect(custData.status).toBe('rejected');
+    expect(custData.code).toBe('UNKNOWN_CUSTOMER');
 
-      const syncBody = {
-        operationId,
-        type: 'SALE',
-        payload: {
-          id: saleId,
-          lines: [
-            {
-              productId: validProductId,
-              quantityBase: 2,
-              unitPricePaisa: 120000,
-              totalPaisa: 240000
-            },
-            {
-              productId: invalidProductId, // Causes failure!
-              quantityBase: 1,
-              unitPricePaisa: 50000,
-              totalPaisa: 50000
-            }
-          ],
-          totalPaisa: 290000,
-          paymentMethod: 'CASH'
-        },
-        createdAt: new Date().toISOString()
-      };
-
-      const res = await fetch(`${baseUrl}/api/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(syncBody)
-      });
-
-      expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data.status).toBe('rejected');
-      expect(data.code).toBe('unknown product');
-
-      // Verify ATOMIC ROLLBACK:
-      // 1. Sale was NOT saved
-      const saleCheck = await pool.query('SELECT * FROM sales WHERE id = $1', [saleId]);
-      expect(saleCheck.rows.length).toBe(0);
-
-      // 2. No stock movements were saved for either product
-      const moveCheck = await pool.query('SELECT * FROM stock_movements WHERE reference_id = $1', [saleId]);
-      expect(moveCheck.rows.length).toBe(0);
-
-      // 3. Valid product stock was NOT deducted
-      const stock = await getCurrentStock(validProductId);
-      expect(stock).toBe(10);
-
-      // 4. processed_operations has no entry
-      const opCheck = await pool.query('SELECT * FROM processed_operations WHERE operation_id = $1', [operationId]);
-      expect(opCheck.rows.length).toBe(0);
-    });
-
-    // Additional test: Unknown Product rejection
-    it('should reject with code "unknown product" if single product is not found', async () => {
-      const nonExistentProductId = crypto.randomUUID();
-      const operationId = crypto.randomUUID();
-
-      const syncBody = {
-        operationId,
-        type: 'SALE',
+    // 4b: Unknown Product
+    const prodOpId = crypto.randomUUID();
+    const prodRes = await fetch(`${baseUrl}/api/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operationId: prodOpId,
+        type: 'SALE_CASH',
         payload: {
           id: crypto.randomUUID(),
-          lines: [
-            {
-              productId: nonExistentProductId,
-              quantityBase: 1,
-              unitPricePaisa: 1000,
-              totalPaisa: 1000
-            }
-          ],
+          lines: [{ productId: nonExistentProductId, quantityBase: 1, unitPricePaisa: 1000, totalPaisa: 1000 }],
           totalPaisa: 1000,
           paymentMethod: 'CASH'
         },
         createdAt: new Date().toISOString()
-      };
-
-      const res = await fetch(`${baseUrl}/api/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(syncBody)
-      });
-
-      expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data.status).toBe('rejected');
-      expect(data.code).toBe('unknown product');
+      })
     });
 
-    // Additional test: Invalid Data rejection
-    it('should reject with code "invalid data" when payload fails zod validation', async () => {
-      const operationId = crypto.randomUUID();
+    expect(prodRes.status).toBe(400);
+    const prodData = await prodRes.json();
+    expect(prodData.status).toBe('rejected');
+    expect(prodData.code).toBe('UNKNOWN_PRODUCT');
+  });
 
-      // Missing required lines array and negative totalPaisa
-      const syncBody = {
+  // -------------------------------------------------------------
+  // TEST 5: ATOMIC ROLLBACK
+  // -------------------------------------------------------------
+  it('5. atomic rollback if one part of a sale fails: nothing is persisted', async () => {
+    const validProductId = await createProduct(10, 'Atta 10kg');
+    const nonExistentProductId = crypto.randomUUID();
+    const operationId = crypto.randomUUID();
+    const saleId = crypto.randomUUID();
+
+    const syncBody = {
+      operationId,
+      type: 'SALE_CASH',
+      payload: {
+        id: saleId,
+        lines: [
+          { productId: validProductId, quantityBase: 2, unitPricePaisa: 100000, totalPaisa: 200000 },
+          { productId: nonExistentProductId, quantityBase: 1, unitPricePaisa: 50000, totalPaisa: 50000 }
+        ],
+        totalPaisa: 250000,
+        paymentMethod: 'CASH'
+      },
+      createdAt: new Date().toISOString()
+    };
+
+    const res = await fetch(`${baseUrl}/api/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(syncBody)
+    });
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.status).toBe('rejected');
+    expect(data.code).toBe('UNKNOWN_PRODUCT');
+
+    // Assert atomic rollback:
+    expect((await pool.query('SELECT * FROM sales WHERE id = $1', [saleId])).rows.length).toBe(0);
+    expect((await pool.query('SELECT * FROM stock_movements WHERE reference_id = $1', [saleId])).rows.length).toBe(0);
+    expect((await pool.query('SELECT * FROM processed_operations WHERE operation_id = $1', [operationId])).rows.length).toBe(0);
+    expect(await getCurrentStock(validProductId)).toBe(10);
+  });
+
+  // -------------------------------------------------------------
+  // TEST 6: UDHAAR SALE INCREASES THE BALANCE
+  // -------------------------------------------------------------
+  it('6. an udhaar sale increases the customer balance', async () => {
+    const productId = await createProduct(20, 'Sugar 1kg');
+    const customerId = await createCustomer('Tariq Bhai', 0);
+    const operationId = crypto.randomUUID();
+    const saleId = crypto.randomUUID();
+
+    const res = await fetch(`${baseUrl}/api/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         operationId,
-        type: 'SALE',
+        type: 'SALE_UDHAAR',
         payload: {
-          id: 'not-a-valid-uuid',
-          totalPaisa: -500,
-          paymentMethod: ''
+          id: saleId,
+          customerId,
+          lines: [{ productId, quantityBase: 5, unitPricePaisa: 15000, totalPaisa: 75000 }],
+          totalPaisa: 75000,
+          paymentMethod: 'UDHAAR'
         },
         createdAt: new Date().toISOString()
-      };
-
-      const res = await fetch(`${baseUrl}/api/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(syncBody)
-      });
-
-      expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data.status).toBe('rejected');
-      expect(data.code).toBe('invalid data');
-      expect(data.reason).toBeDefined();
+      })
     });
 
-    // Additional test: Append-Only Trigger Verification
-    it('should prevent UPDATE and DELETE on stock_movements and ledger_entries via database triggers', async () => {
-      const productId = await createProduct(5, 'Spices Pack');
-      const customerId = await createCustomer('Zahid Kiryana');
+    expect(res.status).toBe(200);
 
-      // Insert a stock movement
-      const moveId = crypto.randomUUID();
-      await pool.query(
-        `INSERT INTO stock_movements (id, product_id, type, quantity_base, unit_cost_paisa, reason, sync_status)
-         VALUES ($1, $2, 'PURCHASE', 5, 2000, 'Purchase', 'SYNCED')`,
-        [moveId, productId]
-      );
+    // Verify customer balance increased by 75000 paisa (Rs 750)
+    const balance = await getCustomerBalance(customerId);
+    expect(balance).toBe(75000);
 
-      // Attempt UPDATE on stock_movements should fail
-      await expect(
-        pool.query('UPDATE stock_movements SET quantity_base = 100 WHERE id = $1', [moveId])
-      ).rejects.toThrow(/append-only/i);
+    // Verify GET /api/balances confirms the increase
+    const balRes = await fetch(`${baseUrl}/api/balances?customerId=${customerId}`);
+    expect(balRes.status).toBe(200);
+    const balData = await balRes.json();
+    expect(balData.balancePaisa).toBe(75000);
+    expect(balData.debitPaisa).toBe(75000);
+    expect(balData.creditPaisa).toBe(0);
+  });
 
-      // Attempt DELETE on stock_movements should fail
-      await expect(
-        pool.query('DELETE FROM stock_movements WHERE id = $1', [moveId])
-      ).rejects.toThrow(/append-only/i);
+  // -------------------------------------------------------------
+  // TEST 7: PAYMENT DECREASES THE BALANCE
+  // -------------------------------------------------------------
+  it('7. a payment decreases the customer balance', async () => {
+    const customerId = await createCustomer('Rashid Tailor', 50000); // starts with Rs 500
+    const operationId = crypto.randomUUID();
+    const paymentId = crypto.randomUUID();
 
-      // Insert a ledger entry
-      const ledgerId = crypto.randomUUID();
-      await pool.query(
-        `INSERT INTO ledger_entries (id, customer_id, type, amount_paisa, direction, note, sync_status)
-         VALUES ($1, $2, 'PAYMENT', 10000, 'CREDIT', 'Cash received', 'SYNCED')`,
-        [ledgerId, customerId]
-      );
-
-      // Attempt UPDATE on ledger_entries should fail
-      await expect(
-        pool.query('UPDATE ledger_entries SET amount_paisa = 50000 WHERE id = $1', [ledgerId])
-      ).rejects.toThrow(/append-only/i);
-
-      // Attempt DELETE on ledger_entries should fail
-      await expect(
-        pool.query('DELETE FROM ledger_entries WHERE id = $1', [ledgerId])
-      ).rejects.toThrow(/append-only/i);
+    const res = await fetch(`${baseUrl}/api/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operationId,
+        type: 'PAYMENT_RECEIVED',
+        payload: {
+          id: paymentId,
+          customerId,
+          amountPaisa: 30000, // payment of Rs 300
+          note: 'Wasooli from Rashid'
+        },
+        createdAt: new Date().toISOString()
+      })
     });
+
+    expect(res.status).toBe(200);
+
+    // Balance should decrease from 50000 to 20000 paisa
+    const balance = await getCustomerBalance(customerId);
+    expect(balance).toBe(20000);
+
+    // Verify GET /api/balances confirms the decrease
+    const balRes = await fetch(`${baseUrl}/api/balances?customerId=${customerId}`);
+    expect(balRes.status).toBe(200);
+    const balData = await balRes.json();
+    expect(balData.balancePaisa).toBe(20000);
+    expect(balData.creditPaisa).toBe(30000);
+  });
+
+  // -------------------------------------------------------------
+  // TEST 8: A RETURN ENTRY RESTORES STOCK AND CREDITS LEDGER
+  // -------------------------------------------------------------
+  it('8. a return entry restores stock and credits customer balance', async () => {
+    const productId = await createProduct(5, 'Soap Bar');
+    const customerId = await createCustomer('Zahid Master', 10000);
+    const operationId = crypto.randomUUID();
+
+    const res = await fetch(`${baseUrl}/api/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operationId,
+        type: 'RETURN_ENTRY',
+        payload: {
+          productId,
+          quantityBase: 2, // customer returns 2 bars
+          customerId,
+          amountPaisa: 4000, // Rs 40 credit
+          reason: 'Defective packaging'
+        },
+        createdAt: new Date().toISOString()
+      })
+    });
+
+    expect(res.status).toBe(200);
+
+    // Stock should increase from 5 to 7
+    const stock = await getCurrentStock(productId);
+    expect(stock).toBe(7);
+
+    // Customer balance should decrease from 10000 to 6000 paisa
+    const balance = await getCustomerBalance(customerId);
+    expect(balance).toBe(6000);
+  });
+
+  // -------------------------------------------------------------
+  // TEST 9: REVERSAL OF AN UDHAAR ENTRY
+  // -------------------------------------------------------------
+  it('9. reversal of an udhaar entry creates opposite entry and restores balance', async () => {
+    const customerId = await createCustomer('Bashir Darzi', 0);
+    const entryId = crypto.randomUUID();
+
+    // Create an initial udhaar entry directly
+    await pool.query(
+      `INSERT INTO ledger_entries (id, customer_id, type, amount_paisa, direction, note, sync_status)
+       VALUES ($1, $2, 'UDHAAR', 15000, 'DEBIT', 'Mistaken charge', 'SYNCED')`,
+      [entryId, customerId]
+    );
+
+    expect(await getCustomerBalance(customerId)).toBe(15000);
+
+    // Reverse the entry
+    const operationId = crypto.randomUUID();
+    const res = await fetch(`${baseUrl}/api/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operationId,
+        type: 'REVERSAL',
+        payload: {
+          reversalOfId: entryId,
+          reason: 'Correction of accidental billing'
+        },
+        createdAt: new Date().toISOString()
+      })
+    });
+
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.status).toBe('ok');
+    expect(data.duplicate).toBe(false);
+
+    // Original entry remains in DB unchanged (append-only)
+    const original = await pool.query('SELECT * FROM ledger_entries WHERE id = $1', [entryId]);
+    expect(original.rows.length).toBe(1);
+    expect(original.rows[0].direction).toBe('DEBIT');
+
+    // Opposite entry created
+    const reversed = await pool.query('SELECT * FROM ledger_entries WHERE reversal_of_id = $1', [entryId]);
+    expect(reversed.rows.length).toBe(1);
+    expect(reversed.rows[0].direction).toBe('CREDIT');
+    expect(reversed.rows[0].type).toBe('REVERSAL');
+    expect(reversed.rows[0].amount_paisa).toBe('15000');
+
+    // Customer balance restored to 0
+    expect(await getCustomerBalance(customerId)).toBe(0);
+  });
+
+  // -------------------------------------------------------------
+  // TEST 10: REVERSAL OF A SALE RESTORES STOCK AND LEDGER
+  // -------------------------------------------------------------
+  it('10. reversal of a sale restores stock and ledger together in one transaction', async () => {
+    const productId = await createProduct(10, 'Ghee Tin 5L');
+    const customerId = await createCustomer('Chaudhry Rafiq', 0);
+    const saleId = crypto.randomUUID();
+
+    // Perform Udhaar Sale of 4 units (total 40,000 paisa)
+    await fetch(`${baseUrl}/api/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operationId: crypto.randomUUID(),
+        type: 'SALE_UDHAAR',
+        payload: {
+          id: saleId,
+          customerId,
+          lines: [{ productId, quantityBase: 4, unitPricePaisa: 10000, totalPaisa: 40000 }],
+          totalPaisa: 40000,
+          paymentMethod: 'UDHAAR'
+        },
+        createdAt: new Date().toISOString()
+      })
+    });
+
+    // Stock should be 6, balance should be 40000
+    expect(await getCurrentStock(productId)).toBe(6);
+    expect(await getCustomerBalance(customerId)).toBe(40000);
+
+    // Reverse the entire sale
+    const reversalOpId = crypto.randomUUID();
+    const res = await fetch(`${baseUrl}/api/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operationId: reversalOpId,
+        type: 'REVERSAL',
+        payload: {
+          reversalOfId: saleId,
+          reason: 'Customer returned all items and cancelled sale'
+        },
+        createdAt: new Date().toISOString()
+      })
+    });
+
+    expect(res.status).toBe(200);
+
+    // Stock restored back to 10
+    expect(await getCurrentStock(productId)).toBe(10);
+
+    // Balance restored back to 0
+    expect(await getCustomerBalance(customerId)).toBe(0);
+  });
+
+  // -------------------------------------------------------------
+  // TEST 11: REVERSING THE SAME ENTRY TWICE IS REJECTED
+  // -------------------------------------------------------------
+  it('11. reversing the same entry twice is rejected with ALREADY_REVERSED', async () => {
+    const customerId = await createCustomer('Imran Chai Wala', 10000);
+    const entryId = crypto.randomUUID();
+
+    await pool.query(
+      `INSERT INTO ledger_entries (id, customer_id, type, amount_paisa, direction, note, sync_status)
+       VALUES ($1, $2, 'UDHAAR', 10000, 'DEBIT', 'Debit to reverse', 'SYNCED')`,
+      [entryId, customerId]
+    );
+
+    // First reversal: succeeds
+    const firstRes = await fetch(`${baseUrl}/api/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operationId: crypto.randomUUID(),
+        type: 'REVERSAL',
+        payload: { reversalOfId: entryId, reason: 'First reversal' },
+        createdAt: new Date().toISOString()
+      })
+    });
+    expect(firstRes.status).toBe(200);
+
+    // Second reversal of same entry: rejected!
+    const secondRes = await fetch(`${baseUrl}/api/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operationId: crypto.randomUUID(),
+        type: 'REVERSAL',
+        payload: { reversalOfId: entryId, reason: 'Duplicate reversal attempt' },
+        createdAt: new Date().toISOString()
+      })
+    });
+
+    expect(secondRes.status).toBe(400);
+    const data = await secondRes.json();
+    expect(data.status).toBe('rejected');
+    expect(data.code).toBe('ALREADY_REVERSED');
+    expect(data.reason).toMatch(/already been reversed/i);
+  });
+
+  // -------------------------------------------------------------
+  // CHECK ENDPOINTS: GET /api/stock & GET /api/balances
+  // -------------------------------------------------------------
+  it('computed check endpoints: GET /api/stock and GET /api/balances compute values dynamically', async () => {
+    const stockRes = await fetch(`${baseUrl}/api/stock`);
+    expect(stockRes.status).toBe(200);
+    const stockData = await stockRes.json();
+    expect(Array.isArray(stockData)).toBe(true);
+
+    const balRes = await fetch(`${baseUrl}/api/balances`);
+    expect(balRes.status).toBe(200);
+    const balData = await balRes.json();
+    expect(Array.isArray(balData)).toBe(true);
   });
 });

@@ -42,7 +42,7 @@ export const ledgerEntrySchema = z.object({
   id: z.string().uuid({ message: 'ledger entry id must be a valid UUID' }),
   customerId: z.string().uuid({ message: 'customerId must be a valid UUID' }),
   type: z.enum(['UDHAAR', 'PAYMENT', 'RETURN', 'REVERSAL']),
-  amountPaisa: z.number().int().nonnegative({ message: 'amountPaisa must be non-negative integer' }),
+  amountPaisa: z.number().int().positive({ message: 'amountPaisa must be a positive integer' }),
   direction: z.enum(['DEBIT', 'CREDIT']).optional(),
   note: z.string().nullable().optional(),
   saleId: z.string().uuid().nullable().optional(),
@@ -70,5 +70,28 @@ export const customerSchema = z.object({
   phone: z.string().default(''),
   openingBalancePaisa: z.number().int().default(0),
   creditLimitPaisa: z.number().int().nonnegative().default(0),
+  createdAt: z.string().optional()
+});
+
+export const reversalSchema = z.object({
+  reversalOfId: z.string().uuid({ message: 'reversalOfId must be a valid UUID' }),
+  reason: z.string().trim().min(1, { message: 'reversal reason is mandatory' })
+});
+
+export const stockPurchaseSchema = z.object({
+  id: z.string().uuid({ message: 'id must be a valid UUID' }),
+  productId: z.string().uuid({ message: 'productId must be a valid UUID' }),
+  quantityBase: z.number().int().positive({ message: 'quantityBase must be a positive integer' }),
+  unitCostPaisa: z.number().int().nonnegative().nullable().optional(),
+  reason: z.string().optional(),
+  referenceId: z.string().uuid().nullable().optional(),
+  createdAt: z.string().optional()
+});
+
+export const paymentReceivedSchema = z.object({
+  id: z.string().uuid({ message: 'id must be a valid UUID' }),
+  customerId: z.string().uuid({ message: 'customerId must be a valid UUID' }),
+  amountPaisa: z.number().int().positive({ message: 'amountPaisa must be a positive integer' }),
+  note: z.string().optional(),
   createdAt: z.string().optional()
 });
