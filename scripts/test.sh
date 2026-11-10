@@ -1,3 +1,6 @@
 #!/usr/bin/env bash
-echo "Running placeholder tests..."
-exit 0
+set -euo pipefail
+cd "$(dirname "$0")/../server"
+npm ci
+npx tsc --noEmit
+npx vitest run

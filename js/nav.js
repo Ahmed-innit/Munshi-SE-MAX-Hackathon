@@ -1,30 +1,30 @@
 /* ============================================================
-   Munshi AI — Navigation & Header Controller
+   Munshi AI — Navigation & Header (Roman Urdu)
    ============================================================ */
 
 function switchTab(tab) {
     state.activeTab = tab;
 
-    // Hide all views
+    // Tamam views chupayein
     document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
     const activeEl = document.getElementById('view-' + tab);
     if (activeEl) activeEl.classList.remove('hidden');
 
-    // Update header text
+    // Header unwanat Roman Urdu mein
     const titles = {
-        home:     ['Madina Kiryana',  'Haji Tariq'],
-        stock:    ['Godown Inventory','Stock Register'],
-        bikri:    ['Counter 01 • POS','New Sale (Bikri)'],
-        udhaar:   ['Customer Ledgers','Udhaar Book'],
-        packages: ['Telecom Portal',  'Mobile Load'],
-        reports:  ['Madina Kiryana',  'Karobari Reports']
+        home:     ['Madina Kiryana Store', 'Haji Tariq Sb'],
+        stock:    ['Godown Ka Maal',        'Stock Register'],
+        bikri:    ['Counter 01 • Naqad',   'Nayi Bikri (Bill)'],
+        udhaar:   ['Grahakon Ka Hisaab',   'Udhaar Register'],
+        packages: ['Mobile Portal',        'Load Aur Packages'],
+        reports:  ['Karobari Jaiza',       'Munafa Aur Reports']
     };
     if (titles[tab]) {
         document.getElementById('header-subtitle').innerText = titles[tab][0];
         document.getElementById('header-title').innerText   = titles[tab][1];
     }
 
-    // Update bottom nav icon states
+    // Neechay wali patti kay button active karein
     ['home', 'stock', 'udhaar', 'packages'].forEach(navId => {
         const btn  = document.getElementById('nav-' + navId);
         if (!btn) return;
@@ -39,7 +39,7 @@ function switchTab(tab) {
         }
     });
 
-    // Reports button in header
+    // Reports button
     const repBtn = document.getElementById('header-reports-btn');
     repBtn.className = tab === 'reports'
         ? 'w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-sm transition-all'
@@ -55,16 +55,15 @@ function toggleSyncMode() {
     const txt = document.getElementById('sync-text');
     if (state.isOnline) {
         dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500';
-        txt.innerText  = 'Synced';
-        showToast('Cloud Sync Active • All entries backed up');
+        txt.innerText  = 'Mahfooz (Online)';
+        showToast('Internet Mojood Hai • Data Cloud Par Mahfooz Hai');
     } else {
         dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse';
-        txt.innerText  = 'Offline Ready';
-        showToast('Offline Mode • Saving entries on device');
+        txt.innerText  = 'Baghair Internet (Offline)';
+        showToast('Offline Mode Shuru • Phone Mein Mahfooz Ho Raha Hai');
     }
 }
 
 function openProfileModal() {
     showToast('Madina Kiryana Store • G-9 Markaz Islamabad');
 }
-

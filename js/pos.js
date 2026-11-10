@@ -1,5 +1,6 @@
 /* ============================================================
-   Munshi AI — POS / Bikri (New Sale) View
+   Munshi AI — Counter / Bikri POS View (Roman Urdu)
+   Connected with Local Database Persistence
    ============================================================ */
 
 function setPosCustomerMode(mode) {
@@ -23,7 +24,8 @@ function setPosCustomerMode(mode) {
 }
 
 function populatePosCustomerDropdown() {
-    const sel     = document.getElementById('pos-customer-select');
+    const sel = document.getElementById('pos-customer-select');
+    if (!sel) return;
     sel.innerHTML = state.customers.map(c =>
         `<option value="${c.id}" ${c.id == state.posCustomerId ? 'selected' : ''}>${c.name} (${c.role})</option>`
     ).join('');
@@ -31,7 +33,9 @@ function populatePosCustomerDropdown() {
 }
 
 function onPosCustomerChange() {
-    state.posCustomerId = parseInt(document.getElementById('pos-customer-select').value, 10);
+    const sel = document.getElementById('pos-customer-select');
+    if (!sel) return;
+    state.posCustomerId = parseInt(sel.value, 10);
     const cust = state.customers.find(c => c.id === state.posCustomerId);
     if (cust) {
         const initials = cust.name.split(' ').map(w => w[0]).join('').slice(0, 2);
@@ -42,8 +46,9 @@ function onPosCustomerChange() {
 }
 
 function renderPosQuickPills() {
-    const q   = (document.getElementById('pos-item-search')?.value || '').toLowerCase();
+    const q = (document.getElementById('pos-item-search')?.value || '').toLowerCase();
     const container = document.getElementById('pos-quick-pills');
+    if (!container) return;
     const list = state.products.filter(p => p.name.toLowerCase().includes(q));
 
     container.innerHTML = list.map(p => `
@@ -57,27 +62,49 @@ function renderPosQuickPills() {
 function addProductToPos(productId) {
     const prod = state.products.find(p => p.id === productId);
     if (!prod) return;
+
+    // Edge Case: Check Stock in Database
+    if (prod.stock <= 0) {
+        showToast(`Maaf kijiye ga! ${prod.name.split('(')[0]} godown mein khatam ho chuka hai.`);
+        return;
+    }
+
     const existing = state.cart.find(c => c.productId === productId);
     if (existing) {
+        if (existing.qty + 1 > prod.stock) {
+            showToast(`Godown mein sirf ${prod.stock} ${prod.unit} mojood hai!`);
+            return;
+        }
         existing.qty += 1;
     } else {
         state.cart.push({ productId: prod.id, name: prod.name, price: prod.price, qty: 1, unit: prod.unit });
     }
+
+    persistDB();
     if (state.activeTab !== 'bikri') switchTab('bikri');
     else renderPosCart();
-    showToast(`Added ${prod.name.split('(')[0]} to Bill`);
+    showToast(`${prod.name.split('(')[0]} bill mein shamil kar diya`);
 }
 
 function updatePosCartQty(productId, delta) {
     const item = state.cart.find(c => c.productId === productId);
     if (!item) return;
+    const prod = state.products.find(p => p.id === productId);
+
+    if (delta > 0 && prod && item.qty + delta > prod.stock) {
+        showToast(`Godown mein sirf ${prod.stock} ${prod.unit} mojood hai!`);
+        return;
+    }
+
     item.qty = +(item.qty + delta).toFixed(1);
     if (item.qty <= 0) state.cart = state.cart.filter(c => c.productId !== productId);
+    persistDB();
     renderPosCart();
 }
 
 function clearPosCart() {
     state.cart = [];
+    persistDB();
     renderPosCart();
 }
 
@@ -89,10 +116,11 @@ function getPosTotals() {
 
 function renderPosCart() {
     const list = document.getElementById('pos-cart-list');
-    document.getElementById('pos-cart-badge').innerText = `${state.cart.length} Items`;
+    if (!list) return;
+    document.getElementById('pos-cart-badge').innerText = `${state.cart.length} Cheezein`;
 
     list.innerHTML = state.cart.length === 0
-        ? `<div class="py-8 text-center text-xs text-slate-400">Cart is empty. Tap any product above to add.</div>`
+        ? `<div class="py-8 text-center text-xs text-slate-400">Bill khali hai. Upar se koi bhi cheez chun kar shamil karein.</div>`
         : state.cart.map(item => {
             const step = item.unit === 'KG' ? 0.5 : 1;
             return `
@@ -127,6 +155,7 @@ function setPosPaymentMode(mode) {
     state.posPaymentMode = mode;
     ['cash', 'udhaar', 'split'].forEach(m => {
         const btn = document.getElementById('pos-pay-' + m);
+        if (!btn) return;
         btn.className = m === mode
             ? 'py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-1 bg-slate-900 text-white shadow-xs transition-all'
             : 'py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-1 bg-slate-50 text-slate-600 border border-slate-200/60 transition-all';
@@ -145,33 +174,35 @@ function setPosPaymentMode(mode) {
 
 function updatePosContextBanner() {
     const banner = document.getElementById('pos-context-banner');
+    if (!banner) return;
     const { net } = getPosTotals();
     const cust = state.customers.find(c => c.id === state.posCustomerId) || state.customers[0];
 
     if (state.posPaymentMode === 'cash') {
         banner.innerHTML = `<span class="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>
-            <span>Rs. ${net.toLocaleString()} will be added to Cash Sales.</span>`;
+            <span>Rs. ${net.toLocaleString()} aaj ki Naqad Bikri mein darj hoga.</span>`;
     } else if (state.posPaymentMode === 'udhaar') {
-        const newBal = cust.balance + net;
+        const newBal = (cust ? cust.balance : 0) + net;
         banner.innerHTML = `<span class="material-symbols-outlined text-[16px] text-red-500">info</span>
-            <span><strong>${cust.name}</strong> new Khata balance: <strong class="text-red-600">Rs. ${newBal.toLocaleString()}</strong></span>`;
+            <span><strong>${cust ? cust.name : 'Grahak'}</strong> ka naya khata baqiya: <strong class="text-red-600">Rs. ${newBal.toLocaleString()}</strong></span>`;
     } else {
         const cashPaid   = parseFloat(document.getElementById('pos-split-cash')?.value) || 0;
         const udhaarPart = Math.max(0, net - cashPaid);
-        document.getElementById('pos-split-udhaar').innerText = `Rs. ${udhaarPart.toLocaleString()}`;
-        const newBal = cust.balance + udhaarPart;
+        const splitEl = document.getElementById('pos-split-udhaar');
+        if (splitEl) splitEl.innerText = `Rs. ${udhaarPart.toLocaleString()}`;
+        const newBal = (cust ? cust.balance : 0) + udhaarPart;
         banner.innerHTML = `<span class="material-symbols-outlined text-[16px] text-amber-600">call_split</span>
-            <span>Rs. ${cashPaid} Cash + Rs. ${udhaarPart} to <strong>${cust.name}</strong> (New Bal: Rs. ${newBal.toLocaleString()})</span>`;
+            <span>Rs. ${cashPaid} Naqad + Rs. ${udhaarPart} Udhaar baam <strong>${cust ? cust.name : 'Grahak'}</strong> (Naya Baqiya: Rs. ${newBal.toLocaleString()})</span>`;
     }
 }
 
 function completePosSale() {
-    if (state.cart.length === 0) return showToast('Please add items to the bill first');
+    if (state.cart.length === 0) return showToast('Pehle bill mein cheezein shamil karein');
     const { net }  = getPosTotals();
     const cust     = state.customers.find(c => c.id === state.posCustomerId) || state.customers[0];
     const itemSum  = state.cart.map(i => `${i.qty}x ${i.name.split('(')[0].trim()}`).join(', ');
 
-    // Deduct stock
+    // Godown se maal kam karein aur Database mein update karein
     state.cart.forEach(item => {
         const prod = state.products.find(p => p.id === item.productId);
         if (prod) prod.stock = Math.max(0, +(prod.stock - item.qty).toFixed(1));
@@ -179,36 +210,37 @@ function completePosSale() {
 
     if (state.posPaymentMode === 'cash') {
         state.cashSalesToday += net;
-        state.transactions.unshift({ id: Date.now(), title: itemSum, subtitle: 'POS Cash Sale • Just now', amount: net, type: 'sale' });
+        state.transactions.unshift({ id: Date.now(), title: itemSum, subtitle: 'POS Naqad Bikri • Abhi abhi', amount: net, type: 'sale' });
     } else if (state.posPaymentMode === 'udhaar') {
         state.nayaUdhaarToday += net;
-        cust.balance += net;
-        state.transactions.unshift({ id: Date.now(), title: `${cust.name} — ${itemSum}`, subtitle: 'POS Udhaar Bill • Just now', amount: net, type: 'udhaar' });
+        if (cust) cust.balance += net;
+        state.transactions.unshift({ id: Date.now(), title: `${cust.name} — ${itemSum}`, subtitle: 'POS Udhaar Parchi • Abhi abhi', amount: net, type: 'udhaar' });
     } else {
         const cashPaid   = Math.min(net, parseFloat(document.getElementById('pos-split-cash')?.value) || 0);
         const udhaarPart = Math.max(0, net - cashPaid);
         state.cashSalesToday  += cashPaid;
         state.nayaUdhaarToday += udhaarPart;
-        cust.balance           += udhaarPart;
-        state.transactions.unshift({ id: Date.now(), title: `${cust.name} (Split Bill)`, subtitle: `Rs.${cashPaid} Cash + Rs.${udhaarPart} Udhaar`, amount: net, type: 'udhaar' });
+        if (cust) cust.balance += udhaarPart;
+        state.transactions.unshift({ id: Date.now(), title: `${cust.name} (Adha Naqad, Adha Udhaar)`, subtitle: `Rs.${cashPaid} Naqad + Rs.${udhaarPart} Udhaar`, amount: net, type: 'udhaar' });
     }
 
-    // Show receipt
+    // Parchi modal dikhayein
+    const payModeLabel = state.posPaymentMode === 'cash' ? 'Naqad Cash' : (state.posPaymentMode === 'udhaar' ? 'Udhaar Khata' : 'Adha Naqad / Udhaar');
     document.getElementById('receipt-body').innerHTML = `
-        <div class="flex justify-between py-1"><span class="text-slate-400">Customer:</span>
-            <span class="font-semibold text-slate-900">${state.posCustomerMode === 'walkin' ? 'Walk-in Cash' : cust.name}</span></div>
-        <div class="flex justify-between py-1"><span class="text-slate-400">Items:</span>
-            <span class="font-medium text-slate-800">${state.cart.length} Products</span></div>
-        <div class="flex justify-between py-1"><span class="text-slate-400">Payment Mode:</span>
-            <span class="font-semibold uppercase text-slate-900">${state.posPaymentMode}</span></div>
+        <div class="flex justify-between py-1"><span class="text-slate-400">Grahak:</span>
+            <span class="font-semibold text-slate-900">${state.posCustomerMode === 'walkin' ? 'Aam Grahak (Naqad)' : cust.name}</span></div>
+        <div class="flex justify-between py-1"><span class="text-slate-400">Kul Cheezein:</span>
+            <span class="font-medium text-slate-800">${state.cart.length} Aqsaam</span></div>
+        <div class="flex justify-between py-1"><span class="text-slate-400">Adaigi Ka Tareeqa:</span>
+            <span class="font-semibold uppercase text-slate-900">${payModeLabel}</span></div>
         <div class="flex justify-between pt-2 border-t border-slate-200 text-sm font-bold text-slate-900">
-            <span>Net Total:</span><span>Rs. ${net.toLocaleString()}</span></div>
+            <span>Kul Raqam:</span><span>Rs. ${net.toLocaleString()}</span></div>
     `;
     document.getElementById('modal-receipt').classList.remove('hidden');
     document.getElementById('modal-receipt').classList.add('flex');
 
     state.cart = [];
     document.getElementById('pos-discount').value = 0;
+    persistDB(); // Mahfooz karein
     renderAll();
 }
-
