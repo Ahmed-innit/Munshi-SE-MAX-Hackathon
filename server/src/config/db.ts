@@ -3,24 +3,34 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 // Load .env relative to server root
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-dotenv.config();
+if (process.env.NODE_ENV !== 'test') {
+  dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+  dotenv.config();
+} else {
+  dotenv.config({ path: path.resolve(__dirname, '../../.env.test') });
+  dotenv.config({ path: path.resolve(__dirname, '../.env.test') });
+}
 
 const connectionString = process.env.DATABASE_URL;
 
-if (!connectionString) {
-  throw new Error('DATABASE_URL is not set in environment or server/.env');
-}
-
 const dbSchema = process.env.DB_SCHEMA || (process.env.NODE_ENV === 'test' ? 'test' : undefined);
 
-export const pool = new Pool({
-  connectionString,
-  ssl: {
-    rejectUnauthorized: false
-  },
-  ...(dbSchema ? { options: `-c search_path=${dbSchema},public` } : {})
-});
+export const pool = connectionString
+  ? new Pool({
+      connectionString,
+      ssl: {
+        rejectUnauthorized: false
+      },
+      ...(dbSchema ? { options: `-c search_path=${dbSchema},public` } : {})
+    })
+  : (new Proxy({} as Pool, {
+      get(_target, prop) {
+        if (prop === 'then') return undefined;
+        return () => {
+          throw new Error('DATABASE_URL is not set in environment or server/.env');
+        };
+      }
+    }) as Pool);
 
 export const query = <T extends QueryResultRow = any>(
   text: string,

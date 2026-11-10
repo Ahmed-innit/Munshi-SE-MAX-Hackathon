@@ -11,48 +11,49 @@ import crypto from 'crypto';
 let server: Server;
 let baseUrl: string;
 
-beforeAll(async () => {
-  // 1. Prepare test schema to ensure real data is NEVER written to
-  const client = await pool.connect();
-  try {
-    await client.query('CREATE SCHEMA IF NOT EXISTS test;');
-    const migrationSql = fs.readFileSync(
-      path.resolve(__dirname, '../src/migrations/001_initial_schema.sql'),
-      'utf8'
-    );
-    await client.query(migrationSql);
-  } finally {
-    client.release();
-  }
+const hasDb = Boolean(process.env.DATABASE_URL && process.env.DATABASE_URL.trim() !== '');
 
-  // 2. Start ephemeral test server
-  await new Promise<void>((resolve) => {
-    server = app.listen(0, () => {
-      const address = server.address();
-      if (address && typeof address === 'object') {
-        baseUrl = `http://127.0.0.1:${address.port}`;
-      }
-      resolve();
+describe.skipIf(!hasDb)('Munshi Kiryana Sync & Endpoints API (skipped: DATABASE_URL not set in environment)', { timeout: 35000 }, () => {
+  beforeAll(async () => {
+    // 1. Prepare test schema to ensure real data is NEVER written to
+    const client = await pool.connect();
+    try {
+      await client.query('CREATE SCHEMA IF NOT EXISTS test;');
+      const migrationSql = fs.readFileSync(
+        path.resolve(__dirname, '../src/migrations/001_initial_schema.sql'),
+        'utf8'
+      );
+      await client.query(migrationSql);
+    } finally {
+      client.release();
+    }
+
+    // 2. Start ephemeral test server
+    await new Promise<void>((resolve) => {
+      server = app.listen(0, () => {
+        const address = server.address();
+        if (address && typeof address === 'object') {
+          baseUrl = `http://127.0.0.1:${address.port}`;
+        }
+        resolve();
+      });
     });
   });
-});
 
-afterAll(async () => {
-  if (server) {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
-  }
-  // Clean up test schema
-  try {
-    const client = await pool.connect();
-    await client.query('DROP SCHEMA IF EXISTS test CASCADE;');
-    client.release();
-  } catch (err) {
-    console.error('Error cleaning up test schema:', err);
-  }
-  await pool.end();
-});
-
-describe('Munshi Kiryana Sync & Endpoints API', { timeout: 35000 }, () => {
+  afterAll(async () => {
+    if (server) {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+    // Clean up test schema
+    try {
+      const client = await pool.connect();
+      await client.query('DROP SCHEMA IF EXISTS test CASCADE;');
+      client.release();
+    } catch (err) {
+      console.error('Error cleaning up test schema:', err);
+    }
+    await pool.end();
+  });
   // Helper to create a product in DB
   async function createProduct(initialStock = 0, name = 'Test Product') {
     const productId = crypto.randomUUID();
