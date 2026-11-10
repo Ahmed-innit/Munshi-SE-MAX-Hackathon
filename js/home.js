@@ -1,5 +1,8 @@
 /* ============================================================
    Munshi AI — Awaaz Aur Home View (Roman Urdu)
+   With Natural Language Parser connected directly to the Database,
+   precise calculation based on database prices & quantities,
+   and edge cases for items/customers not present in DB.
    ============================================================ */
 
 function toggleVoiceRecording() {
@@ -18,9 +21,10 @@ function toggleVoiceRecording() {
             if (!state.isRecording) return;
             toggleVoiceRecording();
             const samples = [
-                'Chaudhry Bashir ko 1200 rupay udhaar diya',
-                'Bhai Tariq ne 1500 cash wasooli di',
-                '3kg Cheeni aur 1 Tapal Chai naqad bechi'
+                'Bhai Tariq ko 500 rupay udhaar diya',
+                'Chaudhry Bashir ne 2000 wasooli di',
+                '2 Tapal Chai aur 3kg Cheeni naqad bechi',
+                'Sabun 10 dabba naqad becha' // Example of missing DB item
             ];
             document.getElementById('ai-command-input').value =
                 samples[Math.floor(Math.random() * samples.length)];
@@ -39,89 +43,347 @@ function prefillAICommand(cmd) {
     processAICommand();
 }
 
+/**
+ * Intelligent Parser connected with the Database:
+ * Parses Urdu numerals & quantities, matches products in database,
+ * calculates exact total based on real DB prices,
+ * and handles edge case when customer/product is not found in database.
+ */
 function processAICommand() {
     const input = document.getElementById('ai-command-input');
     const text  = input.value.trim();
     if (!text) return;
 
-    const lower    = text.toLowerCase();
-    const numMatch = text.match(/\d+/g);
-    const amount   = numMatch ? parseInt(numMatch[numMatch.length - 1], 10) : 500;
+    const lower = text.toLowerCase();
 
-    // Grahak dhoondein
-    let matchedCustomer = state.customers.find(c =>
-        lower.includes((c.name.split(' ')[1] || c.name).toLowerCase())
-    );
-    if (!matchedCustomer) matchedCustomer = state.customers[1]; // default Bhai Tariq
+    // 1. Check for Wasooli (Payment Received)
+    const isWasooli = lower.includes('wasool') || lower.includes('diya cash') || 
+                      lower.includes('wapis') || lower.includes('aayi') || lower.includes('jama');
 
-    if (lower.includes('wasool') || lower.includes('diya cash') || lower.includes('wapis') || lower.includes('aayi')) {
+    // 2. Check for Udhaar (Credit)
+    const isUdhaar = lower.includes('udhaar') || lower.includes('khata') || 
+                     lower.includes('likho') || lower.includes('baqiya');
+
+    // 3. Find Customer in Database
+    let matchedCustomer = null;
+    for (const c of state.customers) {
+        const parts = c.name.toLowerCase().split(' ');
+        for (const p of parts) {
+            if (p.length > 2 && lower.includes(p)) {
+                matchedCustomer = c;
+                break;
+            }
+        }
+        if (matchedCustomer) break;
+    }
+
+    // Edge Case: If Udhaar or Wasooli requested but customer not found in DB
+    if ((isWasooli || isUdhaar) && !matchedCustomer) {
+        // Look for candidate name after 'ko' or before 'ne'
+        let candidateName = 'Naya Grahak';
+        const matchName = text.match(/([a-zA-Z\s]+)\s+(ko|ne)/i);
+        if (matchName && matchName[1]) {
+            candidateName = matchName[1].trim();
+        }
+
+        const numMatch = text.match(/\d+/g);
+        const enteredAmt = numMatch ? parseInt(numMatch[numMatch.length - 1], 10) : 0;
+
         state.pendingAI = {
-            customerId:    matchedCustomer.id,
-            customerName:  `${matchedCustomer.name} (${matchedCustomer.role})`,
-            amount,
-            type:  'wasooli',
+            isEdgeCase: true,
+            edgeCaseType: 'customer_not_found',
+            candidateName: candidateName,
+            amount: enteredAmt,
+            type: isUdhaar ? 'udhaar' : 'wasooli',
+            label: 'Grahak Database Mein Mojood Nahi',
+            rawText: `"${text}"`,
+            message: `Grahak "${candidateName}" database mein nahi mila. Pehle naya khata kholein ya sahi naam darj karein.`
+        };
+
+        input.value = '';
+        renderPendingAICard();
+        showToast('Grahak database mein nahi mila!');
+        return;
+    }
+
+    // Handle Wasooli with matched customer
+    if (isWasooli) {
+        const numMatch = text.match(/\d+/g);
+        const amount = numMatch ? parseInt(numMatch[numMatch.length - 1], 10) : 0;
+        if (amount <= 0) {
+            showToast('Bara-e-meherbani wasooli ki raqam batayein');
+            return;
+        }
+
+        state.pendingAI = {
+            isEdgeCase: false,
+            customerId: matchedCustomer.id,
+            customerName: `${matchedCustomer.name} (${matchedCustomer.role})`,
+            amount: amount,
+            type: 'wasooli',
             label: 'Wasooli Mili (Paisa Aaya)',
             rawText: `"${text}"`
         };
-    } else if (lower.includes('udhaar') || lower.includes('khata') || lower.includes('likho')) {
-        state.pendingAI = {
-            customerId:    matchedCustomer.id,
-            customerName:  `${matchedCustomer.name} (${matchedCustomer.role})`,
-            amount,
-            type:  'udhaar',
-            label: 'Naya Udhaar Diya',
-            rawText: `"${text}"`
-        };
-    } else {
-        state.pendingAI = {
-            customerId:   null,
-            customerName: text,
-            amount:       amount < 100 ? 940 : amount,
-            type:  'sale',
-            label: 'Naqad Bikri (Cash Sale)',
-            rawText: `"${text}"`
-        };
+        input.value = '';
+        renderPendingAICard();
+        showToast(`Wasooli Rs. ${amount} tasdeeq kay liye tayyar hai`);
+        return;
     }
+
+    // Handle pure Udhaar without item listing (e.g., "Bhai Tariq ko 500 udhaar diya")
+    const isDirectCashCredit = isUdhaar && (lower.includes('rupay') || lower.includes('rs') || !hasAnyProductKeywords(lower));
+    if (isDirectCashCredit && matchedCustomer) {
+        const numMatch = text.match(/\d+/g);
+        const amount = numMatch ? parseInt(numMatch[numMatch.length - 1], 10) : 500;
+
+        state.pendingAI = {
+            isEdgeCase: false,
+            customerId: matchedCustomer.id,
+            customerName: `${matchedCustomer.name} (${matchedCustomer.role})`,
+            amount: amount,
+            type: 'udhaar',
+            label: 'Naya Udhaar (Naqad/Khata)',
+            rawText: `"${text}"`
+        };
+        input.value = '';
+        renderPendingAICard();
+        showToast(`Udhaar Rs. ${amount} tasdeeq kay liye tayyar hai`);
+        return;
+    }
+
+    // 4. Parse Sale / Items from Database
+    // Parse quantities and products
+    const parsedSale = parseProductsFromText(text, lower);
+
+    // Edge Case: No products matched in database
+    if (parsedSale.items.length === 0) {
+        const numMatch = text.match(/\d+/g);
+        const fallbackAmt = numMatch ? parseInt(numMatch[0], 10) : 0;
+
+        state.pendingAI = {
+            isEdgeCase: true,
+            edgeCaseType: 'product_not_found',
+            rawQuery: text,
+            amount: fallbackAmt,
+            type: isUdhaar ? 'udhaar' : 'sale',
+            label: 'Maal Database Mein Mojood Nahi',
+            rawText: `"${text}"`,
+            message: `Aap kay jumlay mein se koi bhi cheez godown database se match nahi hui. Sahi naam (Misaal: Cheeni, Chai, Ghee, Chawal) bolein ya pehle naya maal darj karein.`
+        };
+        input.value = '';
+        renderPendingAICard();
+        showToast('Maal database mein nahi mila!');
+        return;
+    }
+
+    // Edge Case: Check for stock sufficiency in Database
+    const outOfStockItems = [];
+    for (const item of parsedSale.items) {
+        if (item.product.stock < item.qty) {
+            outOfStockItems.push(`${item.product.name} (Baqiya Stock: ${item.product.stock} ${item.product.unit})`);
+        }
+    }
+
+    const calculatedTotal = parsedSale.total;
+    const itemSummary = parsedSale.items.map(i => `${i.qty} ${i.product.unit} ${i.product.name.split('(')[0].trim()}`).join(', ');
+
+    state.pendingAI = {
+        isEdgeCase: outOfStockItems.length > 0,
+        edgeCaseType: outOfStockItems.length > 0 ? 'insufficient_stock' : null,
+        outOfStockMessage: outOfStockItems.join(', '),
+        customerId: isUdhaar && matchedCustomer ? matchedCustomer.id : null,
+        customerName: isUdhaar && matchedCustomer ? `${matchedCustomer.name} (${matchedCustomer.role})` : 'Aam Grahak (Naqad)',
+        items: parsedSale.items,
+        amount: calculatedTotal,
+        type: isUdhaar ? 'udhaar' : 'sale',
+        label: isUdhaar ? 'Udhaar Bikri' : 'Naqad Bikri (Cash Sale)',
+        itemSummary: itemSummary,
+        rawText: `"${text}"`
+    };
 
     input.value = '';
     renderPendingAICard();
-    showToast('Munshi AI ne aapki awaaz samajh li');
+    showToast(`Asal Hisaab: Rs. ${calculatedTotal} (${parsedSale.items.length} cheezein)`);
 }
 
+// Helper: Check if text contains product names
+function hasAnyProductKeywords(lower) {
+    for (const p of state.products) {
+        if (lower.includes(p.name.toLowerCase().split(' ')[0])) return true;
+        if (p.aliases && p.aliases.some(a => lower.includes(a))) return true;
+    }
+    return false;
+}
+
+// Match items from database and compute actual sum: (quantity * DB price)
+function parseProductsFromText(text, lower) {
+    const matched = [];
+    let grandTotal = 0;
+
+    // Word to number mapping
+    const wordNums = {
+        'ek': 1, 'aik': 1, 'one': 1,
+        'do': 2, 'two': 2,
+        'teen': 3, 'three': 3,
+        'char': 4, 'chaar': 4, 'four': 4,
+        'paanch': 5, 'panch': 5, 'five': 5,
+        'che': 6, 'chhay': 6, 'six': 6,
+        'saat': 7, 'seven': 7,
+        'aath': 8, 'eight': 8,
+        'nau': 9, 'nao': 9, 'nine': 9,
+        'das': 10, 'ten': 10
+    };
+
+    // Sort products by longest alias first to prevent substring collision
+    const sortedProducts = [...state.products].sort((a, b) => b.name.length - a.name.length);
+
+    for (const prod of sortedProducts) {
+        const searchTerms = [prod.name.toLowerCase(), ...(prod.aliases || [])];
+        let foundTerm = null;
+
+        for (const term of searchTerms) {
+            if (lower.includes(term)) {
+                foundTerm = term;
+                break;
+            }
+        }
+
+        if (foundTerm) {
+            // Find quantity preceding the product term
+            // e.g. "2kg cheeni", "3 tapal", "paanch dabba doodh"
+            const regex = new RegExp(`(\\d+(\\.\\d+)?|ek|aik|do|teen|chaar|char|paanch|panch|che|saat|aath|das)\\s*(kg|kilo|pack|bori|peti|dabba)?\\s*${foundTerm}`, 'i');
+            const match = text.match(regex);
+
+            let qty = 1;
+            if (match && match[1]) {
+                const rawNum = match[1].toLowerCase();
+                if (wordNums[rawNum]) {
+                    qty = wordNums[rawNum];
+                } else if (!isNaN(parseFloat(rawNum))) {
+                    qty = parseFloat(rawNum);
+                }
+            } else {
+                // Check if any standalone number precedes it in a 3-word window
+                const words = lower.split(/\s+/);
+                const termIndex = words.findIndex(w => w.includes(foundTerm));
+                if (termIndex > 0) {
+                    const prevWord = words[termIndex - 1];
+                    if (wordNums[prevWord]) qty = wordNums[prevWord];
+                    else if (!isNaN(parseFloat(prevWord))) qty = parseFloat(prevWord);
+                }
+            }
+
+            const itemTotal = Math.round(qty * prod.price);
+            grandTotal += itemTotal;
+
+            matched.push({
+                product: prod,
+                qty: qty,
+                unitPrice: prod.price,
+                total: itemTotal
+            });
+        }
+    }
+
+    // Fallback: If no products found by name, but user explicitly wrote "500 ki bikri"
+    if (matched.length === 0) {
+        const numMatch = text.match(/\d+/g);
+        if (numMatch && (lower.includes('bikri') || lower.includes('sale') || lower.includes('becha'))) {
+            const explicitAmt = parseInt(numMatch[numMatch.length - 1], 10);
+            return {
+                items: [],
+                total: explicitAmt
+            };
+        }
+    }
+
+    return {
+        items: matched,
+        total: grandTotal
+    };
+}
+
+// Render dynamic AI Card with Edge Case badges
 function renderPendingAICard() {
     const container = document.getElementById('ai-pending-container');
     if (!state.pendingAI) { container.innerHTML = ''; return; }
 
-    const p          = state.pendingAI;
+    const p = state.pendingAI;
+
+    // Edge Case: When Customer or Product was NOT found in Database
+    if (p.isEdgeCase) {
+        container.innerHTML = `
+            <div class="bg-amber-950/90 text-amber-100 border border-amber-500/50 rounded-2xl p-5 shadow-lg flex flex-col gap-3 slide-up">
+                <div class="flex justify-between items-center">
+                    <span class="text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-slate-950 px-2.5 py-1 rounded-full">
+                        Database Alert (Edge Case)
+                    </span>
+                    <span class="text-xs text-amber-300 italic truncate max-w-[160px]">${p.rawText}</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-amber-400 text-2xl shrink-0 mt-0.5">warning</span>
+                    <div>
+                        <p class="font-bold text-sm text-white">${p.label}</p>
+                        <p class="text-xs text-amber-200/90 mt-1 leading-relaxed">${p.message || p.outOfStockMessage}</p>
+                    </div>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    ${p.edgeCaseType === 'customer_not_found' ? `
+                        <button onclick="openNewCustomerModal(); dismissPendingAI();" class="flex-1 bg-amber-400 hover:bg-amber-300 text-slate-950 py-2.5 rounded-xl font-bold text-xs active:scale-95 transition-all">
+                            + Naya Khata Banayein
+                        </button>
+                    ` : ''}
+                    ${p.edgeCaseType === 'product_not_found' ? `
+                        <button onclick="openNewProductModal(); dismissPendingAI();" class="flex-1 bg-amber-400 hover:bg-amber-300 text-slate-950 py-2.5 rounded-xl font-bold text-xs active:scale-95 transition-all">
+                            + Godown Mein Maal Daalein
+                        </button>
+                    ` : ''}
+                    <button onclick="dismissPendingAI()" class="px-4 bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl font-medium text-xs active:scale-95 transition-all">
+                        Khatam Karein
+                    </button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
     const badgeColor = p.type === 'udhaar' ? 'text-red-400' : 'text-emerald-400';
 
     container.innerHTML = `
         <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-lg flex flex-col gap-4 slide-up">
             <div class="flex justify-between items-center">
                 <span class="text-[10px] font-semibold uppercase tracking-wider bg-white/10 text-slate-300 px-2.5 py-1 rounded-full">
-                    AI Tasdeeq Ki Zaroorat Hai
+                    Database Se Asal Rate Tasdeeq
                 </span>
                 <span class="text-xs text-slate-400 italic truncate max-w-[160px]">${p.rawText}</span>
             </div>
             <div class="flex items-start justify-between gap-4">
                 <div class="flex items-center gap-3.5">
                     <div class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-                        <span class="material-symbols-outlined text-white text-xl">graphic_eq</span>
+                        <span class="material-symbols-outlined text-white text-xl">database</span>
                     </div>
                     <div>
-                        <p class="font-semibold text-base leading-snug">${p.customerName}</p>
+                        <p class="font-semibold text-base leading-snug">${p.customerName || p.itemSummary || 'Naqad Bikri'}</p>
                         <p class="text-xs ${badgeColor} font-medium mt-0.5">${p.label}</p>
+                        ${p.items && p.items.length > 0 ? `
+                            <p class="text-[11px] text-slate-400 mt-1">
+                                ${p.items.map(i => `${i.qty}x ${i.product.name.split('(')[0]} @ Rs.${i.unitPrice}`).join(' + ')}
+                            </p>
+                        ` : ''}
                     </div>
                 </div>
-                <p class="text-xl font-bold tracking-tight shrink-0">Rs. ${p.amount.toLocaleString()}</p>
+                <div class="text-right shrink-0">
+                    <span class="text-[10px] text-slate-400 block uppercase">Kul Hisaab</span>
+                    <p class="text-xl font-bold tracking-tight text-emerald-400">Rs. ${p.amount.toLocaleString()}</p>
+                </div>
             </div>
             <div class="grid grid-cols-3 gap-2 pt-1">
                 <button onclick="confirmPendingAI()"
-                    class="col-span-2 bg-white text-slate-900 py-2.5 rounded-xl font-semibold text-xs active:scale-95 transition-all flex items-center justify-center gap-1">
-                    <span class="material-symbols-outlined text-[16px]">check</span> Tasdeeq Karein (Save)
+                    class="col-span-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-2.5 rounded-xl font-bold text-xs active:scale-95 transition-all flex items-center justify-center gap-1 shadow-md">
+                    <span class="material-symbols-outlined text-[16px]">check</span> Database Mein Darj Karein
                 </button>
                 <button onclick="dismissPendingAI()"
-                    class="bg-slate-800 text-slate-300 py-2.5 rounded-xl font-medium text-xs active:scale-95 transition-all">
+                    class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl font-medium text-xs active:scale-95 transition-all">
                     Khatam Karein
                 </button>
             </div>
@@ -130,26 +392,55 @@ function renderPendingAICard() {
 }
 
 function confirmPendingAI() {
-    if (!state.pendingAI) return;
+    if (!state.pendingAI || state.pendingAI.isEdgeCase) return;
     const p = state.pendingAI;
     const c = state.customers.find(x => x.id === p.customerId);
+
+    // If sale items are present, deduct real inventory from Database
+    if (p.items && p.items.length > 0) {
+        for (const item of p.items) {
+            const dbProduct = state.products.find(x => x.id === item.product.id);
+            if (dbProduct) {
+                dbProduct.stock = Math.max(0, +(dbProduct.stock - item.qty).toFixed(1));
+            }
+        }
+    }
 
     if (p.type === 'udhaar') {
         state.nayaUdhaarToday += p.amount;
         if (c) c.balance += p.amount;
-        state.transactions.unshift({ id: Date.now(), title: p.customerName, subtitle: 'Awaaz Se Naya Udhaar • Abhi abhi',   amount: p.amount, type: 'udhaar'  });
+        state.transactions.unshift({ 
+            id: Date.now(), 
+            title: p.itemSummary ? `${c ? c.name : 'Grahak'} — ${p.itemSummary}` : p.customerName, 
+            subtitle: 'AI Udhaar Darj • Abhi abhi', 
+            amount: p.amount, 
+            type: 'udhaar'  
+        });
     } else if (p.type === 'wasooli') {
         state.wasooliToday += p.amount;
         if (c) c.balance = Math.max(0, c.balance - p.amount);
-        state.transactions.unshift({ id: Date.now(), title: p.customerName, subtitle: 'Awaaz Se Wasooli • Abhi abhi', amount: p.amount, type: 'wasooli' });
+        state.transactions.unshift({ 
+            id: Date.now(), 
+            title: p.customerName, 
+            subtitle: 'AI Wasooli Mili • Abhi abhi', 
+            amount: p.amount, 
+            type: 'wasooli' 
+        });
     } else {
         state.cashSalesToday += p.amount;
-        state.transactions.unshift({ id: Date.now(), title: p.customerName, subtitle: 'Awaaz Se Naqad Bikri • Abhi abhi', amount: p.amount, type: 'sale' });
+        state.transactions.unshift({ 
+            id: Date.now(), 
+            title: p.itemSummary || 'Naqad Maal Becha', 
+            subtitle: 'AI Naqad Bikri • Abhi abhi', 
+            amount: p.amount, 
+            type: 'sale' 
+        });
     }
 
     state.pendingAI = null;
+    persistDB(); // Persist directly to Database
     renderAll();
-    showToast('Khata Aur Roznamcha Mein Darj Kar Diya!');
+    showToast('Database Mein Kamiyabi Se Mahfooz Ho Gaya!');
 }
 
 function dismissPendingAI() {
@@ -168,7 +459,7 @@ function setHomeTxFilter(filter) {
 }
 
 function renderHomeTransactions() {
-    const list     = document.getElementById('home-tx-list');
+    const list = document.getElementById('home-tx-list');
     const filtered = state.transactions.filter(t =>
         state.homeTxFilter === 'all' || t.type === state.homeTxFilter
     );

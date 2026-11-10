@@ -1,5 +1,6 @@
 /* ============================================================
    Munshi AI — Udhaar Khata Register (Roman Urdu)
+   Connected with Database Persistence
    ============================================================ */
 
 function setUdhaarFilter(f) {
@@ -16,10 +17,18 @@ function renderUdhaarList() {
     const totalUdhaar = state.customers.reduce((s, c) => s + c.balance, 0);
     const overdueSum  = state.customers.filter(c => c.overdueDays > 0).reduce((s, c) => s + c.balance, 0);
 
-    document.getElementById('udhaar-total-val').innerText     = `Rs. ${totalUdhaar.toLocaleString()}`;
-    document.getElementById('udhaar-active-count').innerText  = `Kul ${state.customers.length} grahakon kay khatay active hain`;
-    document.getElementById('udhaar-today-wasooli').innerText = `Rs. ${state.wasooliToday.toLocaleString()}`;
-    document.getElementById('udhaar-overdue-val').innerText   = `Rs. ${overdueSum.toLocaleString()}`;
+    const totEl = document.getElementById('udhaar-total-val');
+    const actEl = document.getElementById('udhaar-active-count');
+    const wasEl = document.getElementById('udhaar-today-wasooli');
+    const ovrEl = document.getElementById('udhaar-overdue-val');
+    const listEl = document.getElementById('udhaar-customer-list');
+
+    if (totEl) totEl.innerText     = `Rs. ${totalUdhaar.toLocaleString()}`;
+    if (actEl) actEl.innerText  = `Kul ${state.customers.length} grahakon kay khatay active hain`;
+    if (wasEl) wasEl.innerText = `Rs. ${state.wasooliToday.toLocaleString()}`;
+    if (ovrEl) ovrEl.innerText   = `Rs. ${overdueSum.toLocaleString()}`;
+
+    if (!listEl) return;
 
     const q = (document.getElementById('udhaar-search')?.value || '').toLowerCase();
     const filtered = state.customers.filter(c => {
@@ -30,7 +39,21 @@ function renderUdhaarList() {
         return true;
     });
 
-    document.getElementById('udhaar-customer-list').innerHTML = filtered.map(c => {
+    if (filtered.length === 0) {
+        listEl.innerHTML = `
+            <div class="soft-card p-6 rounded-2xl text-center space-y-2">
+                <span class="material-symbols-outlined text-amber-500 text-3xl">person_search</span>
+                <p class="font-bold text-sm text-slate-800">Database Mein Aesa Koi Grahak Nahi Hai</p>
+                <p class="text-xs text-slate-500">Aap naya khata khol saktay hain ya search tabdeel karein.</p>
+                <button onclick="openNewCustomerModal()" class="mt-2 bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-xl">
+                    + Naya Grahak Khata Kholein
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    listEl.innerHTML = filtered.map(c => {
         const initials  = c.name.split(' ').map(w => w[0]).join('').slice(0, 2);
         const isOverdue = c.overdueDays > 0;
         const pct       = Math.min(100, Math.round((c.balance / c.limit) * 100));
@@ -81,7 +104,8 @@ function renderUdhaarList() {
 }
 
 function openWasooliModal(defaultCustId) {
-    const sel     = document.getElementById('wasooli-customer-select');
+    const sel = document.getElementById('wasooli-customer-select');
+    if (!sel) return;
     sel.innerHTML = state.customers.map(c =>
         `<option value="${c.id}" ${c.id === defaultCustId ? 'selected' : ''}>${c.name} (Baqiya: Rs. ${c.balance.toLocaleString()})</option>`
     ).join('');
@@ -105,6 +129,7 @@ function submitWasooli() {
         });
     }
     closeModal('modal-wasooli');
+    persistDB();
     renderAll();
     showToast(`Rs. ${amt.toLocaleString()} Wasooli darj ho gayi!`);
 }
@@ -124,6 +149,7 @@ function submitNewCustomer() {
 
     state.customers.unshift({ id: Date.now(), name, role, phone, balance: bal, limit: 20000, overdueDays: 0 });
     closeModal('modal-new-customer');
+    persistDB();
     renderAll();
     showToast(`${name} ka naya khata khul gaya!`);
 }

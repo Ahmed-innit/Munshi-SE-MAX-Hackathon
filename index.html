@@ -38,6 +38,11 @@
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 mt-0.5" id="header-title">Haji Tariq Sb</h1>
         </div>
         <div class="flex items-center gap-2.5">
+            <button onclick="db.resetToSeed()" id="header-reset-db-btn"
+                class="w-10 h-10 rounded-full bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 hover:text-amber-600 shadow-xs active:scale-95 transition-all"
+                title="Database Reset (Sample Data)">
+                <span class="material-symbols-outlined text-[20px]">restart_alt</span>
+            </button>
             <button onclick="switchTab('reports')" id="header-reports-btn"
                 class="w-10 h-10 rounded-full bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 hover:text-slate-900 shadow-xs active:scale-95 transition-all"
                 title="Karobari Reports">

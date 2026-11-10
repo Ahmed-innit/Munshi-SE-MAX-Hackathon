@@ -1,5 +1,6 @@
 /* ============================================================
    Munshi AI — Godown / Stock View (Roman Urdu)
+   Connected with Database Persistence & Validation
    ============================================================ */
 
 function setStockCategory(cat) {
@@ -16,32 +17,57 @@ function adjustStock(id, delta) {
     const prod = state.products.find(p => p.id === id);
     if (!prod) return;
     prod.stock = Math.max(0, +(prod.stock + delta).toFixed(1));
+    persistDB();
     renderAll();
 }
 
 function renderStock() {
-    const query    = (document.getElementById('stock-search')?.value || '').toLowerCase();
+    const query = (document.getElementById('stock-search')?.value || '').toLowerCase();
     const filtered = state.products.filter(p => {
-        const matchSearch = p.name.toLowerCase().includes(query) || p.category.toLowerCase().includes(query);
+        const matchSearch = p.name.toLowerCase().includes(query) || 
+                            p.category.toLowerCase().includes(query) ||
+                            (p.aliases && p.aliases.some(a => a.includes(query)));
         if (!matchSearch) return false;
         if (state.stockCategory === 'all')  return true;
         if (state.stockCategory === 'low')  return p.stock <= p.minStock;
         return p.category === state.stockCategory;
     });
 
-    let totalCost   = 0, totalRetail = 0, lowCount = 0;
+    let totalCost = 0, totalRetail = 0, lowCount = 0;
     state.products.forEach(p => {
         totalCost   += p.cost  * p.stock;
         totalRetail += p.price * p.stock;
         if (p.stock <= p.minStock) lowCount++;
     });
 
-    document.getElementById('stock-kpi-count').innerText  = `${state.products.length} Cheezein`;
-    document.getElementById('stock-kpi-low').innerText    = `${lowCount} Khatam Honay Wali`;
-    document.getElementById('stock-kpi-cost').innerText   = `Rs. ${Math.round(totalCost).toLocaleString()}`;
-    document.getElementById('stock-kpi-retail').innerText = `Rs. ${Math.round(totalRetail).toLocaleString()}`;
+    const countEl = document.getElementById('stock-kpi-count');
+    const lowEl = document.getElementById('stock-kpi-low');
+    const costEl = document.getElementById('stock-kpi-cost');
+    const retEl = document.getElementById('stock-kpi-retail');
+    const listEl = document.getElementById('stock-items-list');
 
-    document.getElementById('stock-items-list').innerHTML = filtered.map(p => {
+    if (countEl) countEl.innerText  = `${state.products.length} Cheezein`;
+    if (lowEl) lowEl.innerText    = `${lowCount} Khatam Honay Wali`;
+    if (costEl) costEl.innerText   = `Rs. ${Math.round(totalCost).toLocaleString()}`;
+    if (retEl) retEl.innerText = `Rs. ${Math.round(totalRetail).toLocaleString()}`;
+
+    if (!listEl) return;
+
+    if (filtered.length === 0) {
+        listEl.innerHTML = `
+            <div class="soft-card p-6 rounded-2xl text-center space-y-2">
+                <span class="material-symbols-outlined text-amber-500 text-3xl">inventory</span>
+                <p class="font-bold text-sm text-slate-800">Database Mein Aesi Koi Cheez Nahi Mili</p>
+                <p class="text-xs text-slate-500">Aap naya maal shamil kar saktay hain ya search tabdeel karein.</p>
+                <button onclick="openNewProductModal()" class="mt-2 bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-xl">
+                    + Nayi Cheez Database Mein Daalein
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    listEl.innerHTML = filtered.map(p => {
         const isLow  = p.stock <= p.minStock;
         const profit = p.price - p.cost;
         const badge  = isLow
@@ -108,10 +134,25 @@ function submitNewProduct() {
 
     if (!name) return showToast('Bara-e-meherbani cheez ka naam likhein');
 
-    state.products.unshift({ id: Date.now(), name, category: cat, unit, cost, price: sell, stock, minStock: 5 });
+    // Generate auto aliases for natural language parsing
+    const aliases = [name.toLowerCase(), name.toLowerCase().split(' ')[0]];
+
+    state.products.unshift({ 
+        id: Date.now(), 
+        name, 
+        aliases, 
+        category: cat, 
+        unit, 
+        cost, 
+        price: sell, 
+        stock, 
+        minStock: 5 
+    });
+
     closeModal('modal-new-product');
+    persistDB();
     renderAll();
-    showToast(`${name} godown mein darj ho gaya!`);
+    showToast(`${name} godown database mein darj ho gaya!`);
 }
 
 function simulateBarcodeScan(context) {

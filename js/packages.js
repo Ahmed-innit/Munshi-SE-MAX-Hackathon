@@ -1,12 +1,19 @@
 /* ============================================================
    Munshi AI — Mobile Load Aur Packages (Roman Urdu)
+   Connected with Database Persistence
    ============================================================ */
 
 function renderPackagesView() {
-    document.getElementById('pkg-wallet-balance').innerText = `Rs. ${state.walletBalance.toLocaleString()}`;
-    document.getElementById('pkg-kpi-sales').innerText      = `Rs. ${state.loadSalesToday.toLocaleString()}`;
-    document.getElementById('pkg-kpi-profit').innerText     = `+Rs. ${state.loadProfitToday.toLocaleString()}`;
-    document.getElementById('pkg-kpi-count').innerText      = `${state.loadCountToday} Bhejay Gaye`;
+    const walEl = document.getElementById('pkg-wallet-balance');
+    const salEl = document.getElementById('pkg-kpi-sales');
+    const proEl = document.getElementById('pkg-kpi-profit');
+    const cntEl = document.getElementById('pkg-kpi-count');
+    const netEl = document.getElementById('pkg-network-pills');
+
+    if (walEl) walEl.innerText = `Rs. ${state.walletBalance.toLocaleString()}`;
+    if (salEl) salEl.innerText = `Rs. ${state.loadSalesToday.toLocaleString()}`;
+    if (proEl) proEl.innerText = `+Rs. ${state.loadProfitToday.toLocaleString()}`;
+    if (cntEl) cntEl.innerText = `${state.loadCountToday} Bhejay Gaye`;
 
     const networks = [
         { id: 'jazz',    name: 'Jazz',     dot: 'bg-red-500'   },
@@ -15,51 +22,60 @@ function renderPackagesView() {
         { id: 'telenor', name: 'Telenor',  dot: 'bg-sky-500'   }
     ];
 
-    document.getElementById('pkg-network-pills').innerHTML = networks.map(n => {
-        const active = state.pkgNetwork === n.id;
-        return `
-            <button onclick="selectPkgNetwork('${n.id}')"
-                class="shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all
-                    ${active ? 'bg-slate-900 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600'}">
-                <span class="w-2 h-2 rounded-full ${n.dot}"></span> ${n.name}
-            </button>
-        `;
-    }).join('');
+    if (netEl) {
+        netEl.innerHTML = networks.map(n => {
+            const active = state.pkgNetwork === n.id;
+            return `
+                <button onclick="selectPkgNetwork('${n.id}')"
+                    class="shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition-all
+                        ${active ? 'bg-slate-900 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-600'}">
+                    <span class="w-2 h-2 rounded-full ${n.dot}"></span> ${n.name}
+                </button>
+            `;
+        }).join('');
+    }
 
     const bundles = state.telecomPackages[state.pkgNetwork] || [];
     if (!bundles.some(b => b.id === state.pkgSelectedBundleId) && bundles.length > 0) {
         state.pkgSelectedBundleId = bundles[0].id;
     }
 
-    document.getElementById('pkg-bundles-container').innerHTML = bundles.map(b => {
-        const isSel = b.id === state.pkgSelectedBundleId;
-        return `
-            <div onclick="selectBundle('${b.id}')"
-                class="rounded-2xl p-3.5 cursor-pointer transition-all relative
-                    ${isSel ? 'border-2 border-slate-900 bg-slate-50/70' : 'border border-slate-100 bg-white'}">
-                <span class="text-[9px] font-bold px-2 py-0.5 rounded
-                    ${isSel ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'}">${b.tag}</span>
-                <p class="font-bold text-slate-900 text-sm mt-2">${b.name}</p>
-                <p class="text-[11px] text-slate-400 mt-0.5">${b.specs}</p>
-                <div class="mt-3 flex justify-between items-baseline">
-                    <span class="font-bold text-sm text-slate-900">Rs. ${b.price}</span>
-                    <span class="text-[10px] font-bold text-emerald-600">+Rs.${b.profit} Munafa</span>
+    const bContainer = document.getElementById('pkg-bundles-container');
+    if (bContainer) {
+        bContainer.innerHTML = bundles.map(b => {
+            const isSel = b.id === state.pkgSelectedBundleId;
+            return `
+                <div onclick="selectBundle('${b.id}')"
+                    class="rounded-2xl p-3.5 cursor-pointer transition-all relative
+                        ${isSel ? 'border-2 border-slate-900 bg-slate-50/70' : 'border border-slate-100 bg-white'}">
+                    <span class="text-[9px] font-bold px-2 py-0.5 rounded
+                        ${isSel ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'}">${b.tag}</span>
+                    <p class="font-bold text-slate-900 text-sm mt-2">${b.name}</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">${b.specs}</p>
+                    <div class="mt-3 flex justify-between items-baseline">
+                        <span class="font-bold text-sm text-slate-900">Rs. ${b.price}</span>
+                        <span class="text-[10px] font-bold text-emerald-600">+Rs.${b.profit} Munafa</span>
+                    </div>
                 </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
+    }
 
     // Khata dropdown
-    document.getElementById('pkg-khata-select').innerHTML = state.customers.map(c =>
-        `<option value="${c.id}">${c.name} (Baqiya: Rs. ${c.balance})</option>`
-    ).join('');
+    const khataSel = document.getElementById('pkg-khata-select');
+    if (khataSel) {
+        khataSel.innerHTML = state.customers.map(c =>
+            `<option value="${c.id}">${c.name} (Baqiya: Rs. ${c.balance})</option>`
+        ).join('');
+    }
 
     updatePkgCalculator();
 }
 
 function selectPkgNetwork(netId) {
     state.pkgNetwork = netId;
-    document.getElementById('pkg-detected-badge').innerText = netId.toUpperCase();
+    const badge = document.getElementById('pkg-detected-badge');
+    if (badge) badge.innerText = netId.toUpperCase();
     renderPackagesView();
 }
 
@@ -113,9 +129,12 @@ function updatePkgCalculator() {
         profit = Math.round(price * 0.08);
     }
     const cost = Math.max(0, price - profit);
-    document.getElementById('pkg-calc-price').innerText  = `Rs. ${price.toLocaleString()}`;
-    document.getElementById('pkg-calc-cost').innerText   = `Rs. ${cost.toLocaleString()}`;
-    document.getElementById('pkg-calc-profit').innerText = `+Rs. ${profit.toLocaleString()}`;
+    const prEl = document.getElementById('pkg-calc-price');
+    const csEl = document.getElementById('pkg-calc-cost');
+    const pfEl = document.getElementById('pkg-calc-profit');
+    if (prEl) prEl.innerText  = `Rs. ${price.toLocaleString()}`;
+    if (csEl) csEl.innerText   = `Rs. ${cost.toLocaleString()}`;
+    if (pfEl) pfEl.innerText = `+Rs. ${profit.toLocaleString()}`;
 }
 
 function setPkgPayMode(mode) {
@@ -176,12 +195,14 @@ function executeMobileLoad() {
         });
     }
 
+    persistDB();
     renderAll();
     showToast(`${label} kamyabi se ${phone} par bhej diya gaya! (+Rs.${profit} Munafa)`);
 }
 
 function topUpWallet() {
     state.walletBalance += 5000;
+    persistDB();
     renderPackagesView();
     showToast('Rs. 5,000 Retailer Wallet mein shamil ho gaye');
 }
