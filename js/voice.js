@@ -213,3 +213,4 @@ const UrduTransliteration = {
 };
 
 window.UrduTransliteration = UrduTransliteration;
+
