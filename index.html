@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Munshi AI — Sleek Kiryana ERP</title>
+    <title>Munshi AI — Kiryana ERP</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -28,16 +28,21 @@
     <header class="px-6 pt-10 pb-4 flex justify-between items-center sticky top-0 z-30 glass-header">
         <div>
             <div class="flex items-center gap-2">
-                <p class="text-xs text-slate-500 font-medium tracking-wide uppercase" id="header-subtitle">Madina Kiryana</p>
+                <p class="text-xs text-slate-500 font-medium tracking-wide uppercase" id="header-subtitle">Madina Kiryana Store</p>
                 <button onclick="toggleSyncMode()" id="sync-badge"
                     class="flex items-center gap-1.5 bg-white border border-slate-200/80 px-2 py-0.5 rounded-full shadow-xs active:scale-95 transition-all">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" id="sync-dot"></span>
-                    <span class="text-[10px] font-semibold text-slate-600" id="sync-text">Synced</span>
+                    <span class="text-[10px] font-semibold text-slate-600" id="sync-text">Mahfooz (Online)</span>
                 </button>
             </div>
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 mt-0.5" id="header-title">Haji Tariq</h1>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 mt-0.5" id="header-title">Haji Tariq Sb</h1>
         </div>
         <div class="flex items-center gap-2.5">
+            <button onclick="db.resetToSeed()" id="header-reset-db-btn"
+                class="w-10 h-10 rounded-full bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 hover:text-amber-600 shadow-xs active:scale-95 transition-all"
+                title="Database Reset (Sample Data)">
+                <span class="material-symbols-outlined text-[20px]">restart_alt</span>
+            </button>
             <button onclick="switchTab('reports')" id="header-reports-btn"
                 class="w-10 h-10 rounded-full bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 hover:text-slate-900 shadow-xs active:scale-95 transition-all"
                 title="Karobari Reports">
@@ -55,7 +60,7 @@
     </header>
 
     <!-- ==========================================
-         VIEW 1: HOME (VOICE AI & DAILY OVERVIEW)
+         VIEW 1: HOME (AAWAZ AI AUR ROZANA HISAAB)
          ========================================== -->
     <main id="view-home" class="view-section flex-1 px-6 space-y-7 pt-2">
 
@@ -68,15 +73,15 @@
                         <span class="material-symbols-outlined text-3xl" id="home-mic-icon">mic</span>
                     </button>
                 </div>
-                <h2 class="mt-4 text-base font-semibold text-slate-900" id="voice-status-title">Tap to speak in Urdu</h2>
+                <h2 class="mt-4 text-base font-semibold text-slate-900" id="voice-status-title">Bol kar hisaab darj karein</h2>
                 <p class="text-slate-400 text-xs mt-1 max-w-[240px]" id="voice-status-sub">
-                    "Bhai Tariq ko 500 udhaar diya" or "2kg cheeni cash sale"
+                    "Bhai Tariq ko 500 udhaar diya" ya "2kg cheeni naqad bechi"
                 </p>
 
-                <!-- Natural Language Input Bar -->
+                <!-- Roman Urdu Input Bar -->
                 <div class="w-full mt-5 flex items-center bg-slate-50 border border-slate-200/70 rounded-2xl p-1.5 focus-within:border-slate-400 focus-within:bg-white transition-all">
                     <input id="ai-command-input" type="text"
-                        placeholder="Or type Roman Urdu command..."
+                        placeholder="Yahan Roman Urdu mein likhein..."
                         class="flex-1 bg-transparent px-3 py-1.5 text-sm text-slate-900 placeholder-slate-400 outline-none"
                         onkeydown="if(event.key==='Enter') processAICommand()">
                     <button onclick="processAICommand()"
@@ -85,13 +90,13 @@
                     </button>
                 </div>
 
-                <!-- Quick Prompt Chips -->
+                <!-- Jaldi Walay Buttons -->
                 <div class="w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-3">
                     <button onclick="prefillAICommand('Bhai Tariq ko 850 rupay udhaar diya')"
                         class="shrink-0 text-[11px] font-medium bg-slate-100 hover:bg-slate-200/70 text-slate-700 px-3 py-1.5 rounded-full transition-colors">Naya Udhaar</button>
                     <button onclick="prefillAICommand('Chaudhry Bashir ne 2000 wasooli di')"
                         class="shrink-0 text-[11px] font-medium bg-slate-100 hover:bg-slate-200/70 text-slate-700 px-3 py-1.5 rounded-full transition-colors">Wasooli Aayi</button>
-                    <button onclick="prefillAICommand('2 Tapal Tea aur 5kg Cheeni cash sale')"
+                    <button onclick="prefillAICommand('2 Tapal Chai aur 5kg Cheeni naqad bikri')"
                         class="shrink-0 text-[11px] font-medium bg-slate-100 hover:bg-slate-200/70 text-slate-700 px-3 py-1.5 rounded-full transition-colors">Maal Becha</button>
                     <button onclick="prefillAICommand('Jazz 500 load 03015582910')"
                         class="shrink-0 text-[11px] font-medium bg-slate-100 hover:bg-slate-200/70 text-slate-700 px-3 py-1.5 rounded-full transition-colors">Easyload</button>
@@ -102,13 +107,13 @@
         <!-- Dynamic AI Pending Confirmation Card -->
         <section id="ai-pending-container"></section>
 
-        <!-- Today's Summary (2×2 Grid) -->
+        <!-- Aaj Ka Khulasa (2×2 Grid) -->
         <section>
             <div class="flex justify-between items-center mb-3.5">
-                <h3 class="text-slate-900 font-semibold text-base tracking-tight">Today's Summary</h3>
+                <h3 class="text-slate-900 font-semibold text-base tracking-tight">Aaj Ka Kul Khulasa</h3>
                 <button onclick="switchTab('reports')"
                     class="text-xs font-medium text-slate-400 hover:text-slate-900 flex items-center gap-0.5 transition-colors">
-                    Analytics <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+                    Mukammal Jaiza <span class="material-symbols-outlined text-[14px]">chevron_right</span>
                 </button>
             </div>
             <div class="grid grid-cols-2 gap-3.5">
@@ -116,54 +121,54 @@
                 <div onclick="switchTab('bikri')"
                     class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 cursor-pointer hover:border-slate-200 transition-all">
                     <div class="flex justify-between items-center">
-                        <p class="text-slate-500 text-xs font-medium">Cash Sales</p>
+                        <p class="text-slate-500 text-xs font-medium">Naqad Bikri (Cash)</p>
                         <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                     </div>
                     <div>
                         <p class="text-2xl font-semibold tracking-tight text-slate-900" id="home-kpi-cash">Rs. 38,450</p>
-                        <p class="text-[11px] text-emerald-600 font-medium mt-0.5">+14% vs yesterday</p>
+                        <p class="text-[11px] text-emerald-600 font-medium mt-0.5">+14% kal se zyada</p>
                     </div>
                 </div>
                 <!-- Wasooli -->
                 <div onclick="openWasooliModal()"
                     class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 cursor-pointer hover:border-slate-200 transition-all">
                     <div class="flex justify-between items-center">
-                        <p class="text-slate-500 text-xs font-medium">Wasooli (In)</p>
+                        <p class="text-slate-500 text-xs font-medium">Wasooli Aayi (In)</p>
                         <span class="material-symbols-outlined text-slate-400 text-[16px]">payments</span>
                     </div>
                     <div>
                         <p class="text-2xl font-semibold tracking-tight text-slate-900" id="home-kpi-wasooli">Rs. 18,500</p>
-                        <p class="text-[11px] text-slate-400 font-medium mt-0.5">Cash + Raast QR</p>
+                        <p class="text-[11px] text-slate-400 font-medium mt-0.5">Naqad + Raast QR</p>
                     </div>
                 </div>
                 <!-- Naya Udhaar -->
                 <div onclick="switchTab('udhaar')"
                     class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 cursor-pointer hover:border-slate-200 transition-all">
                     <div class="flex justify-between items-center">
-                        <p class="text-slate-500 text-xs font-medium">Naya Udhaar</p>
+                        <p class="text-slate-500 text-xs font-medium">Naya Udhaar Diya</p>
                         <span class="w-2 h-2 rounded-full bg-red-500"></span>
                     </div>
                     <div>
                         <p class="text-2xl font-semibold tracking-tight text-red-500" id="home-kpi-udhaar">Rs. 6,200</p>
-                        <p class="text-[11px] text-slate-400 font-medium mt-0.5">Today's credit</p>
+                        <p class="text-[11px] text-slate-400 font-medium mt-0.5">Aaj ka udhaar maal</p>
                     </div>
                 </div>
                 <!-- Total Khata -->
                 <div onclick="switchTab('udhaar')"
                     class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28 cursor-pointer hover:border-slate-200 transition-all">
                     <div class="flex justify-between items-center">
-                        <p class="text-slate-500 text-xs font-medium">Total Khata</p>
+                        <p class="text-slate-500 text-xs font-medium">Kul Market Udhaar</p>
                         <span class="material-symbols-outlined text-slate-400 text-[16px]">menu_book</span>
                     </div>
                     <div>
                         <p class="text-2xl font-semibold tracking-tight text-slate-900" id="home-kpi-total-khata">Rs. 45,650</p>
-                        <p class="text-[11px] text-slate-400 font-medium mt-0.5" id="home-kpi-khata-count">4 active accounts</p>
+                        <p class="text-[11px] text-slate-400 font-medium mt-0.5" id="home-kpi-khata-count">4 fa'al khatay</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Low Stock Alert Banner -->
+        <!-- Kam Stock Alert Banner -->
         <section>
             <div onclick="goToLowStock()"
                 class="bg-red-50/70 border border-red-100 rounded-2xl p-4 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-all">
@@ -172,21 +177,21 @@
                         <span class="material-symbols-outlined text-xl">inventory_2</span>
                     </div>
                     <div>
-                        <p class="font-semibold text-sm text-red-950" id="home-lowstock-title">Low Stock Alert</p>
-                        <p class="text-xs text-red-700 mt-0.5" id="home-lowstock-sub">Tapal Tea & Dal Channa running low</p>
+                        <p class="font-semibold text-sm text-red-950" id="home-lowstock-title">Maal Khatam Honay Ka Alert</p>
+                        <p class="text-xs text-red-700 mt-0.5" id="home-lowstock-sub">Tapal Chai aur Daal Channa kam reh gaye hain</p>
                     </div>
                 </div>
                 <span class="material-symbols-outlined text-red-400">chevron_right</span>
             </div>
         </section>
 
-        <!-- Recent Activity Feed -->
+        <!-- Haal Hi Ki Sargarmi (Recent Activity) -->
         <section>
             <div class="flex justify-between items-center mb-3">
-                <h3 class="text-slate-900 font-semibold text-base tracking-tight">Recent Activity</h3>
+                <h3 class="text-slate-900 font-semibold text-base tracking-tight">Haal Hi Ki Sargarmi</h3>
                 <div class="flex gap-1" id="home-tx-filters">
-                    <button onclick="setHomeTxFilter('all')"     data-filter="all"     class="home-filter-pill text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-900 text-white">All</button>
-                    <button onclick="setHomeTxFilter('sale')"    data-filter="sale"    class="home-filter-pill text-[11px] font-medium px-2.5 py-1 rounded-full text-slate-500 hover:text-slate-900">Sales</button>
+                    <button onclick="setHomeTxFilter('all')"     data-filter="all"     class="home-filter-pill text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-900 text-white">Tamam</button>
+                    <button onclick="setHomeTxFilter('sale')"    data-filter="sale"    class="home-filter-pill text-[11px] font-medium px-2.5 py-1 rounded-full text-slate-500 hover:text-slate-900">Bikri</button>
                     <button onclick="setHomeTxFilter('udhaar')"  data-filter="udhaar"  class="home-filter-pill text-[11px] font-medium px-2.5 py-1 rounded-full text-slate-500 hover:text-slate-900">Udhaar</button>
                     <button onclick="setHomeTxFilter('wasooli')" data-filter="wasooli" class="home-filter-pill text-[11px] font-medium px-2.5 py-1 rounded-full text-slate-500 hover:text-slate-900">Wasooli</button>
                 </div>
@@ -196,39 +201,39 @@
     </main>
 
     <!-- ==========================================
-         VIEW 2: STOCK / GODOWN
+         VIEW 2: STOCK / GODOWN KA MAAL
          ========================================== -->
     <main id="view-stock" class="view-section hidden flex-1 px-6 space-y-6 pt-2">
         <!-- Summary Bento -->
         <section class="space-y-3.5">
             <div class="flex justify-between items-center">
-                <p class="text-xs text-slate-500 font-medium" id="stock-subtitle-summary">Real-time Godown Valuation</p>
+                <p class="text-xs text-slate-500 font-medium" id="stock-subtitle-summary">Godown Kay Maal Ki Qaymat</p>
                 <button onclick="openNewProductModal()"
                     class="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform">
-                    <span class="material-symbols-outlined text-[16px]">add</span> New Product
+                    <span class="material-symbols-outlined text-[16px]">add</span> Nayi Cheez Daalein
                 </button>
             </div>
             <div class="grid grid-cols-2 gap-3.5">
                 <div class="soft-card p-4 rounded-2xl flex flex-col justify-between h-24">
                     <div class="flex justify-between items-center">
-                        <span class="text-xs text-slate-500 font-medium">Total Products</span>
+                        <span class="text-xs text-slate-500 font-medium">Kul Cheezein</span>
                         <span class="material-symbols-outlined text-slate-400 text-[18px]">category</span>
                     </div>
-                    <p class="text-xl font-bold text-slate-900 tracking-tight" id="stock-kpi-count">6 Items</p>
+                    <p class="text-xl font-bold text-slate-900 tracking-tight" id="stock-kpi-count">6 Cheezein</p>
                 </div>
                 <div onclick="setStockCategory('low')" class="soft-card p-4 rounded-2xl flex flex-col justify-between h-24 cursor-pointer border-red-100/80">
                     <div class="flex justify-between items-center">
-                        <span class="text-xs text-red-600 font-medium">Low Stock</span>
+                        <span class="text-xs text-red-600 font-medium">Kam Stock</span>
                         <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
                     </div>
-                    <p class="text-xl font-bold text-red-600 tracking-tight" id="stock-kpi-low">2 Alerts</p>
+                    <p class="text-xl font-bold text-red-600 tracking-tight" id="stock-kpi-low">2 Alert</p>
                 </div>
                 <div class="soft-card p-4 rounded-2xl flex flex-col justify-between h-24">
-                    <span class="text-xs text-slate-500 font-medium">Inventory Cost</span>
+                    <span class="text-xs text-slate-500 font-medium">Kharid Qaymat</span>
                     <p class="text-lg font-bold text-slate-900 tracking-tight" id="stock-kpi-cost">Rs. 164,200</p>
                 </div>
                 <div class="soft-card p-4 rounded-2xl flex flex-col justify-between h-24">
-                    <span class="text-xs text-slate-500 font-medium">Expected Sales</span>
+                    <span class="text-xs text-slate-500 font-medium">Mutawaqqa Bikri</span>
                     <p class="text-lg font-bold text-emerald-600 tracking-tight" id="stock-kpi-retail">Rs. 182,400</p>
                 </div>
             </div>
@@ -240,22 +245,22 @@
                 <div class="flex-1 bg-white border border-slate-200/80 rounded-2xl px-3.5 py-2.5 flex items-center shadow-xs focus-within:border-slate-400 transition-colors">
                     <span class="material-symbols-outlined text-slate-400 text-[20px] mr-2">search</span>
                     <input id="stock-search" oninput="renderStock()" type="text"
-                        placeholder="Search item (Ghee, Rice, Tea)..."
+                        placeholder="Cheez talaash karein (Ghee, Chawal, Chai)..."
                         class="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 outline-none">
                 </div>
                 <button onclick="simulateBarcodeScan('stock')"
                     class="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-sm active:scale-95 transition-transform"
-                    title="Simulate Barcode Scan">
+                    title="Barcode Scan Karein">
                     <span class="material-symbols-outlined text-[20px]">barcode_scanner</span>
                 </button>
             </div>
             <!-- Category Pills -->
             <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1" id="stock-cat-pills">
-                <button onclick="setStockCategory('all')"            data-cat="all"            class="stock-cat-btn shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-900 text-white">All Items</button>
-                <button onclick="setStockCategory('low')"            data-cat="low"            class="stock-cat-btn shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">Low Stock</button>
-                <button onclick="setStockCategory('Grain & Pulses')" data-cat="Grain & Pulses" class="stock-cat-btn shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">Daalein & Chawal</button>
-                <button onclick="setStockCategory('Ghee & Oil')"     data-cat="Ghee & Oil"     class="stock-cat-btn shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">Ghee & Oil</button>
-                <button onclick="setStockCategory('Tea & Dairy')"    data-cat="Tea & Dairy"    class="stock-cat-btn shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">Chai & Dairy</button>
+                <button onclick="setStockCategory('all')"            data-cat="all"            class="stock-cat-btn shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-900 text-white">Tamam Maal</button>
+                <button onclick="setStockCategory('low')"            data-cat="low"            class="stock-cat-btn shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">Kam Stock</button>
+                <button onclick="setStockCategory('Daal Chawal')"    data-cat="Daal Chawal"    class="stock-cat-btn shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">Daalein Aur Chawal</button>
+                <button onclick="setStockCategory('Ghee Aur Tail')"  data-cat="Ghee Aur Tail"  class="stock-cat-btn shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">Ghee Aur Tail</button>
+                <button onclick="setStockCategory('Chai Aur Doodh')" data-cat="Chai Aur Doodh" class="stock-cat-btn shrink-0 px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">Chai Aur Doodh</button>
             </div>
         </section>
 
@@ -264,23 +269,23 @@
     </main>
 
     <!-- ==========================================
-         VIEW 3: BIKRI / POS COUNTER
+         VIEW 3: BIKRI / POS COUNTER (NAQAD PARCHI)
          ========================================== -->
     <main id="view-bikri" class="view-section hidden flex-1 px-6 space-y-5 pt-2">
         <!-- Customer Selection -->
         <section class="soft-card rounded-2xl p-4 space-y-3">
             <div class="flex justify-between items-center">
-                <span class="text-xs font-semibold text-slate-700 uppercase tracking-wider">Customer Type</span>
+                <span class="text-xs font-semibold text-slate-700 uppercase tracking-wider">Grahak Ki Qisam</span>
                 <span class="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full">Parchi #1043</span>
             </div>
             <div class="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-xl">
                 <button id="pos-cust-walkin" onclick="setPosCustomerMode('walkin')"
                     class="py-2 rounded-lg text-xs font-semibold transition-all bg-white text-slate-900 shadow-xs">
-                    Naqad (Walk-in)
+                    Naqad (Aam Grahak)
                 </button>
                 <button id="pos-cust-khata" onclick="setPosCustomerMode('khata')"
                     class="py-2 rounded-lg text-xs font-medium text-slate-500 transition-all">
-                    Khata (Regular)
+                    Khata (Pakka Grahak)
                 </button>
             </div>
             <div id="pos-khata-selector-box" class="hidden pt-1">
@@ -291,7 +296,7 @@
                             class="bg-transparent font-semibold text-sm text-slate-900 outline-none w-full truncate cursor-pointer"></select>
                     </div>
                     <div class="text-right pl-2 shrink-0">
-                        <span class="text-[10px] text-slate-400 block">Prev Balance</span>
+                        <span class="text-[10px] text-slate-400 block">Pichla Baqiya</span>
                         <span class="text-xs font-bold text-red-600" id="pos-cust-prev-bal">Rs. 6,450</span>
                     </div>
                 </div>
@@ -304,7 +309,7 @@
                 <div class="relative flex-1">
                     <span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">search</span>
                     <input id="pos-item-search" oninput="renderPosQuickPills()" type="text"
-                        placeholder="Search or tap item to add..."
+                        placeholder="Cheez talaash karein ya dabayein..."
                         class="w-full bg-slate-50 border border-slate-200/70 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 placeholder-slate-400 outline-none focus:bg-white focus:border-slate-400">
                 </div>
                 <button onclick="simulateBarcodeScan('pos')"
@@ -319,10 +324,10 @@
         <section class="soft-card rounded-2xl p-4 space-y-3">
             <div class="flex justify-between items-center">
                 <div class="flex items-center gap-2">
-                    <h3 class="text-sm font-semibold text-slate-900">Bill Items</h3>
-                    <span class="text-[11px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full" id="pos-cart-badge">0 Items</span>
+                    <h3 class="text-sm font-semibold text-slate-900">Bill Ka Maal</h3>
+                    <span class="text-[11px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full" id="pos-cart-badge">0 Cheezein</span>
                 </div>
-                <button onclick="clearPosCart()" class="text-xs text-red-500 font-medium hover:underline">Clear All</button>
+                <button onclick="clearPosCart()" class="text-xs text-red-500 font-medium hover:underline">Saaf Karein</button>
             </div>
             <div class="space-y-2" id="pos-cart-list"></div>
         </section>
@@ -331,11 +336,11 @@
         <section class="soft-card rounded-2xl p-4 space-y-4">
             <div class="space-y-2 text-xs">
                 <div class="flex justify-between text-slate-500">
-                    <span>Subtotal</span>
+                    <span>Kul Total</span>
                     <span class="font-semibold text-slate-900" id="pos-subtotal">Rs. 0</span>
                 </div>
                 <div class="flex justify-between items-center text-slate-500">
-                    <span>Discount (Riayat)</span>
+                    <span>Riayat (Discount)</span>
                     <div class="flex items-center gap-1">
                         <span>- Rs.</span>
                         <input id="pos-discount" oninput="renderPosCart()" type="number" min="0" value="0"
@@ -343,75 +348,75 @@
                     </div>
                 </div>
                 <div class="pt-2 border-t border-slate-100 flex justify-between items-baseline">
-                    <span class="text-sm font-semibold text-slate-900">Net Payable</span>
+                    <span class="text-sm font-semibold text-slate-900">Saaf Raqam (Net Total)</span>
                     <span class="text-2xl font-bold tracking-tight text-slate-900" id="pos-grand-total">Rs. 0</span>
                 </div>
             </div>
 
             <div class="space-y-2 pt-1">
-                <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Payment Method</span>
+                <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Adaigi Ka Tareeqa</span>
                 <div class="grid grid-cols-3 gap-2">
-                    <button id="pos-pay-cash"   onclick="setPosPaymentMode('cash')"   class="py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-1 bg-slate-900 text-white shadow-xs transition-all"><span class="material-symbols-outlined text-[18px]">payments</span> Naqad</button>
-                    <button id="pos-pay-udhaar" onclick="setPosPaymentMode('udhaar')" class="py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-1 bg-slate-50 text-slate-600 border border-slate-200/60 transition-all"><span class="material-symbols-outlined text-[18px]">menu_book</span> Udhaar</button>
-                    <button id="pos-pay-split"  onclick="setPosPaymentMode('split')"  class="py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-1 bg-slate-50 text-slate-600 border border-slate-200/60 transition-all"><span class="material-symbols-outlined text-[18px]">call_split</span> Split</button>
+                    <button id="pos-pay-cash"   onclick="setPosPaymentMode('cash')"   class="py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-1 bg-slate-900 text-white shadow-xs transition-all"><span class="material-symbols-outlined text-[18px]">payments</span> Naqad Cash</button>
+                    <button id="pos-pay-udhaar" onclick="setPosPaymentMode('udhaar')" class="py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-1 bg-slate-50 text-slate-600 border border-slate-200/60 transition-all"><span class="material-symbols-outlined text-[18px]">menu_book</span> Udhaar Khata</button>
+                    <button id="pos-pay-split"  onclick="setPosPaymentMode('split')"  class="py-2.5 rounded-xl text-xs font-semibold flex flex-col items-center gap-1 bg-slate-50 text-slate-600 border border-slate-200/60 transition-all"><span class="material-symbols-outlined text-[18px]">call_split</span> Adha Adha</button>
                 </div>
             </div>
 
             <div id="pos-split-box" class="hidden bg-slate-50 p-3 rounded-xl space-y-2 border border-slate-200/60">
                 <div class="flex justify-between items-center text-xs">
-                    <span class="font-medium text-slate-600">Cash Paid Now:</span>
+                    <span class="font-medium text-slate-600">Abhi Naqad Diya:</span>
                     <input id="pos-split-cash" oninput="updatePosContextBanner()" type="number" min="0" value="500"
                         class="w-24 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-right font-bold text-slate-900 outline-none">
                 </div>
                 <div class="flex justify-between items-center text-xs">
-                    <span class="font-medium text-slate-500">Added to Khata:</span>
+                    <span class="font-medium text-slate-500">Khatay Mein Likha:</span>
                     <span class="font-bold text-red-600" id="pos-split-udhaar">Rs. 0</span>
                 </div>
             </div>
 
             <div id="pos-context-banner" class="bg-slate-50 rounded-xl p-3 text-xs text-slate-600 flex items-center gap-2">
                 <span class="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>
-                <span>Full amount will be recorded in today's Cash Sales.</span>
+                <span>Mukammal raqam aaj ki Naqad Bikri mein darj hogi.</span>
             </div>
 
             <button onclick="completePosSale()"
                 class="w-full py-3.5 rounded-2xl bg-slate-900 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all">
-                <span class="material-symbols-outlined text-[18px]">receipt_long</span> Confirm & Generate Parchi
+                <span class="material-symbols-outlined text-[18px]">receipt_long</span> Tasdeeq Aur Parchi Banayein
             </button>
         </section>
     </main>
 
     <!-- ==========================================
-         VIEW 4: UDHAAR BOOK
+         VIEW 4: UDHAAR KHATA REGISTER
          ========================================== -->
     <main id="view-udhaar" class="view-section hidden flex-1 px-6 space-y-6 pt-2">
         <section class="grid grid-cols-2 gap-3">
             <button onclick="openNewCustomerModal()"
                 class="bg-slate-900 text-white py-3 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-transform">
-                <span class="material-symbols-outlined text-[18px]">person_add</span> New Customer
+                <span class="material-symbols-outlined text-[18px]">person_add</span> Naya Grahak Khata
             </button>
             <button onclick="openWasooliModal()"
                 class="bg-white border border-slate-200 text-slate-900 py-3 rounded-2xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs active:scale-95 transition-transform">
-                <span class="material-symbols-outlined text-[18px] text-emerald-600">payments</span> Record Wasooli
+                <span class="material-symbols-outlined text-[18px] text-emerald-600">payments</span> Wasooli Darj Karein
             </button>
         </section>
 
         <section class="space-y-3.5">
             <div class="soft-card rounded-[2rem] p-6 relative overflow-hidden">
-                <p class="text-slate-500 text-xs font-medium uppercase tracking-wider">Total Receivable (Kul Udhaar)</p>
+                <p class="text-slate-500 text-xs font-medium uppercase tracking-wider">Kul Udhaar Baqiya (Market Receivables)</p>
                 <p class="text-4xl font-bold tracking-tight text-slate-900 mt-1" id="udhaar-total-val">Rs. 45,650</p>
                 <div class="mt-5 pt-4 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
-                    <span id="udhaar-active-count">Across 4 active customer accounts</span>
-                    <span class="text-emerald-600 font-semibold">Auto-Backed Up</span>
+                    <span id="udhaar-active-count">Kul 4 grahakon kay khatay active hain</span>
+                    <span class="text-emerald-600 font-semibold">Khud-kaar Mahfooz</span>
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-3.5">
                 <div class="bg-emerald-50/60 border border-emerald-100 p-4 rounded-2xl flex flex-col justify-between h-24">
-                    <span class="text-emerald-800 text-xs font-medium">Today's Wasooli</span>
+                    <span class="text-emerald-800 text-xs font-medium">Aaj Ki Wasooli</span>
                     <p class="text-xl font-bold text-emerald-950 tracking-tight" id="udhaar-today-wasooli">Rs. 18,500</p>
                 </div>
                 <div class="bg-red-50/60 border border-red-100 p-4 rounded-2xl flex flex-col justify-between h-24">
-                    <span class="text-red-800 text-xs font-medium">Overdue (&gt;30d)</span>
+                    <span class="text-red-800 text-xs font-medium">Purana Udhaar (>30 Din)</span>
                     <p class="text-xl font-bold text-red-950 tracking-tight" id="udhaar-overdue-val">Rs. 14,800</p>
                 </div>
             </div>
@@ -421,13 +426,13 @@
             <div class="bg-white border border-slate-200/80 rounded-2xl px-3.5 py-2.5 flex items-center shadow-xs">
                 <span class="material-symbols-outlined text-slate-400 text-[20px] mr-2">search</span>
                 <input id="udhaar-search" oninput="renderUdhaarList()" type="text"
-                    placeholder="Search customer name or phone..."
+                    placeholder="Grahak ka naam ya phone number likhein..."
                     class="w-full bg-transparent text-sm text-slate-900 placeholder-slate-400 outline-none">
             </div>
             <div class="flex gap-2 overflow-x-auto no-scrollbar" id="udhaar-filter-pills">
-                <button onclick="setUdhaarFilter('all')"     data-filter="all"     class="udhaar-filter-btn px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-900 text-white">All Accounts</button>
-                <button onclick="setUdhaarFilter('overdue')" data-filter="overdue" class="udhaar-filter-btn px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">Overdue</button>
-                <button onclick="setUdhaarFilter('high')"    data-filter="high"    class="udhaar-filter-btn px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">High Balance</button>
+                <button onclick="setUdhaarFilter('all')"     data-filter="all"     class="udhaar-filter-btn px-4 py-1.5 rounded-full text-xs font-semibold bg-slate-900 text-white">Tamam Khatay</button>
+                <button onclick="setUdhaarFilter('overdue')" data-filter="overdue" class="udhaar-filter-btn px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">Purana Udhaar</button>
+                <button onclick="setUdhaarFilter('high')"    data-filter="high"    class="udhaar-filter-btn px-4 py-1.5 rounded-full text-xs font-medium bg-white border border-slate-200 text-slate-600">Zyada Baqiya</button>
             </div>
         </section>
 
@@ -435,7 +440,7 @@
     </main>
 
     <!-- ==========================================
-         VIEW 5: PACKAGES & MOBILE LOAD
+         VIEW 5: PACKAGES AUR MOBILE LOAD
          ========================================== -->
     <main id="view-packages" class="view-section hidden flex-1 px-6 space-y-5 pt-2">
         <!-- Wallet Bar -->
@@ -446,27 +451,27 @@
                         <span class="material-symbols-outlined text-emerald-400">account_balance_wallet</span>
                     </div>
                     <div>
-                        <p class="text-[11px] text-slate-400 font-medium">OneLoad Retailer Wallet</p>
+                        <p class="text-[11px] text-slate-400 font-medium">Dukandar Ka Load Wallet</p>
                         <p class="text-xl font-bold tracking-tight" id="pkg-wallet-balance">Rs. 24,850</p>
                     </div>
                 </div>
                 <button onclick="topUpWallet()"
                     class="bg-white/15 hover:bg-white/25 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-colors active:scale-95">
-                    + Top Up
+                    + Paisay Daalein
                 </button>
             </div>
             <div class="grid grid-cols-3 gap-2.5">
                 <div class="soft-card rounded-2xl p-3">
-                    <p class="text-[10px] text-slate-400 font-semibold uppercase">Load Sales</p>
+                    <p class="text-[10px] text-slate-400 font-semibold uppercase">Load Bikri</p>
                     <p class="text-sm font-bold text-slate-900 mt-0.5" id="pkg-kpi-sales">Rs. 14,200</p>
                 </div>
                 <div class="soft-card rounded-2xl p-3 border-emerald-100">
-                    <p class="text-[10px] text-emerald-600 font-semibold uppercase">Commission</p>
+                    <p class="text-[10px] text-emerald-600 font-semibold uppercase">Bachat/Munafa</p>
                     <p class="text-sm font-bold text-emerald-600 mt-0.5" id="pkg-kpi-profit">+Rs. 1,180</p>
                 </div>
                 <div class="soft-card rounded-2xl p-3">
-                    <p class="text-[10px] text-slate-400 font-semibold uppercase">Transfers</p>
-                    <p class="text-sm font-bold text-slate-900 mt-0.5" id="pkg-kpi-count">42 Sent</p>
+                    <p class="text-[10px] text-slate-400 font-semibold uppercase">Kul Bhejay</p>
+                    <p class="text-sm font-bold text-slate-900 mt-0.5" id="pkg-kpi-count">42 Bhejay Gaye</p>
                 </div>
             </div>
         </section>
@@ -474,8 +479,8 @@
         <!-- Network Selection -->
         <section>
             <div class="flex justify-between items-center mb-2.5">
-                <span class="text-xs font-semibold text-slate-700">Select Network</span>
-                <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Prefix Auto-Detect</span>
+                <span class="text-xs font-semibold text-slate-700">SIM Network Chunein</span>
+                <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Khud-kaar Shanaakht</span>
             </div>
             <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1" id="pkg-network-pills"></div>
         </section>
@@ -483,12 +488,12 @@
         <!-- Load Workspace -->
         <section class="soft-card rounded-[2rem] p-5 space-y-4">
             <div class="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl">
-                <button id="pkg-mode-bundle" onclick="setPkgMode('bundle')" class="py-2 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs transition-all">Super Bundles</button>
-                <button id="pkg-mode-direct" onclick="setPkgMode('direct')" class="py-2 rounded-lg text-xs font-medium text-slate-500 transition-all">Direct Easyload</button>
+                <button id="pkg-mode-bundle" onclick="setPkgMode('bundle')" class="py-2 rounded-lg text-xs font-semibold bg-white text-slate-900 shadow-xs transition-all">Super Packages</button>
+                <button id="pkg-mode-direct" onclick="setPkgMode('direct')" class="py-2 rounded-lg text-xs font-medium text-slate-500 transition-all">Seedha Easyload</button>
             </div>
 
             <div>
-                <label class="text-xs font-semibold text-slate-600 pl-1">Customer Mobile Number</label>
+                <label class="text-xs font-semibold text-slate-600 pl-1">Grahak Ka Mobile Number</label>
                 <div class="mt-1 relative flex items-center">
                     <span class="material-symbols-outlined absolute left-3.5 text-slate-400 text-[18px]">call</span>
                     <input id="pkg-phone-input" oninput="onPkgPhoneInput(this.value)" type="tel" value="0301-5582910"
@@ -503,7 +508,7 @@
 
             <div id="pkg-direct-container" class="hidden space-y-3">
                 <div>
-                    <label class="text-xs font-semibold text-slate-600 pl-1">Easyload Amount (Rs.)</label>
+                    <label class="text-xs font-semibold text-slate-600 pl-1">Easyload Raqam (Rs.)</label>
                     <input id="pkg-direct-amount" oninput="updatePkgCalculator()" type="number" min="50" value="300"
                         class="mt-1 w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 px-4 text-lg font-bold text-slate-900 outline-none focus:bg-white">
                 </div>
@@ -517,11 +522,11 @@
 
             <div class="bg-slate-50 rounded-2xl p-3.5 flex justify-between items-center border border-slate-100">
                 <div>
-                    <p class="text-[11px] text-slate-400 font-medium">Customer Pays: <strong class="text-slate-800" id="pkg-calc-price">Rs. 1,200</strong></p>
-                    <p class="text-[11px] text-slate-400 font-medium mt-0.5">Wallet Deducted: <span id="pkg-calc-cost">Rs. 1,090</span></p>
+                    <p class="text-[11px] text-slate-400 font-medium">Grahak Dega: <strong class="text-slate-800" id="pkg-calc-price">Rs. 1,200</strong></p>
+                    <p class="text-[11px] text-slate-400 font-medium mt-0.5">Wallet Se Katay Ga: <span id="pkg-calc-cost">Rs. 1,090</span></p>
                 </div>
                 <div class="text-right">
-                    <span class="text-[10px] uppercase tracking-wider font-semibold text-emerald-600 block">Your Profit</span>
+                    <span class="text-[10px] uppercase tracking-wider font-semibold text-emerald-600 block">Aap Ka Munafa</span>
                     <span class="text-base font-bold text-emerald-600" id="pkg-calc-profit">+Rs. 110</span>
                 </div>
             </div>
@@ -538,13 +543,13 @@
 
             <button onclick="executeMobileLoad()"
                 class="w-full bg-slate-900 text-white font-semibold text-sm py-3.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] transition-all">
-                <span class="material-symbols-outlined text-[18px]">send_to_mobile</span> Confirm & Send Load
+                <span class="material-symbols-outlined text-[18px]">send_to_mobile</span> Tasdeeq Aur Load Bhejein
             </button>
         </section>
     </main>
 
     <!-- ==========================================
-         VIEW 6: KAROBARI REPORTS
+         VIEW 6: KAROBARI REPORTS AUR TAIZIYA
          ========================================== -->
     <main id="view-reports" class="view-section hidden flex-1 px-6 space-y-6 pt-2">
         <!-- Timeframe Selector -->
@@ -561,42 +566,42 @@
         <section class="grid grid-cols-2 gap-3.5">
             <div class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28">
                 <div class="flex justify-between">
-                    <span class="text-slate-500 text-xs font-medium">Total Sales</span>
+                    <span class="text-slate-500 text-xs font-medium">Kul Bikri</span>
                     <span class="material-symbols-outlined text-emerald-500 text-[18px]">trending_up</span>
                 </div>
                 <div>
                     <p class="text-2xl font-bold text-slate-900 tracking-tight" id="rep-sales">Rs. 384.5k</p>
-                    <p class="text-[11px] text-emerald-600 font-medium mt-0.5">+14% growth</p>
+                    <p class="text-[11px] text-emerald-600 font-medium mt-0.5">+14% barhotri</p>
                 </div>
             </div>
             <div class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28">
                 <div class="flex justify-between">
-                    <span class="text-slate-500 text-xs font-medium">Net Profit</span>
+                    <span class="text-slate-500 text-xs font-medium">Khaalis Munafa</span>
                     <span class="material-symbols-outlined text-slate-400 text-[18px]">savings</span>
                 </div>
                 <div>
                     <p class="text-2xl font-bold text-slate-900 tracking-tight" id="rep-profit">Rs. 58.4k</p>
-                    <p class="text-[11px] text-slate-400 font-medium mt-0.5">15.2% Net Margin</p>
+                    <p class="text-[11px] text-slate-400 font-medium mt-0.5">15.2% Munafa Margin</p>
                 </div>
             </div>
             <div class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28">
                 <div class="flex justify-between">
-                    <span class="text-slate-500 text-xs font-medium">Godown Value</span>
+                    <span class="text-slate-500 text-xs font-medium">Godown Maal Qaymat</span>
                     <span class="material-symbols-outlined text-slate-400 text-[18px]">warehouse</span>
                 </div>
                 <div>
                     <p class="text-xl font-bold text-slate-900 tracking-tight" id="rep-stock">Rs. 182.4k</p>
-                    <p class="text-[11px] text-slate-400 font-medium mt-0.5">Retail Valuation</p>
+                    <p class="text-[11px] text-slate-400 font-medium mt-0.5">Bikri Kay Mutabiq</p>
                 </div>
             </div>
             <div class="soft-card p-5 rounded-2xl flex flex-col justify-between h-28">
                 <div class="flex justify-between">
-                    <span class="text-slate-500 text-xs font-medium">Receivables</span>
+                    <span class="text-slate-500 text-xs font-medium">Market Udhaar</span>
                     <span class="material-symbols-outlined text-red-400 text-[18px]">history_edu</span>
                 </div>
                 <div>
                     <p class="text-xl font-bold text-red-600 tracking-tight" id="rep-udhaar">Rs. 45.6k</p>
-                    <p class="text-[11px] text-slate-400 font-medium mt-0.5">Market Udhaar</p>
+                    <p class="text-[11px] text-slate-400 font-medium mt-0.5">Wasooli Baqiya</p>
                 </div>
             </div>
         </section>
@@ -605,10 +610,10 @@
         <section class="soft-card rounded-[2rem] p-6">
             <div class="flex justify-between items-center mb-5">
                 <div>
-                    <h3 class="text-slate-900 font-semibold text-base tracking-tight">Sales Trend</h3>
-                    <p class="text-xs text-slate-400">Cash vs Udhaar Ratio</p>
+                    <h3 class="text-slate-900 font-semibold text-base tracking-tight">Bikri Ka Rujhaan</h3>
+                    <p class="text-xs text-slate-400">Naqad Bamuqabla Udhaar Ka Tanasub</p>
                 </div>
-                <span class="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg" id="rep-chart-badge">Monthly</span>
+                <span class="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg" id="rep-chart-badge">Is Mahinay Ka</span>
             </div>
             <div class="w-full h-32">
                 <svg class="w-full h-full overflow-visible" viewBox="0 0 320 130">
@@ -618,34 +623,34 @@
                     <g>
                         <rect x="42" y="50"  width="24" height="40" rx="4" class="fill-slate-900 transition-all duration-300"/>
                         <rect x="42" y="32"  width="24" height="16" rx="3" class="fill-slate-200 transition-all duration-300"/>
-                        <text x="54"  y="112" text-anchor="middle" class="fill-slate-400 text-[10px] font-medium">W1</text>
+                        <text x="54"  y="112" text-anchor="middle" class="fill-slate-400 text-[10px] font-medium">H1</text>
                     </g>
                     <g>
                         <rect x="114" y="45" width="24" height="45" rx="4" class="fill-slate-900 transition-all duration-300"/>
                         <rect x="114" y="27" width="24" height="16" rx="3" class="fill-slate-200 transition-all duration-300"/>
-                        <text x="126" y="112" text-anchor="middle" class="fill-slate-400 text-[10px] font-medium">W2</text>
+                        <text x="126" y="112" text-anchor="middle" class="fill-slate-400 text-[10px] font-medium">H2</text>
                     </g>
                     <g>
                         <rect x="186" y="40" width="24" height="50" rx="4" class="fill-slate-900 transition-all duration-300"/>
                         <rect x="186" y="22" width="24" height="16" rx="3" class="fill-slate-200 transition-all duration-300"/>
-                        <text x="198" y="112" text-anchor="middle" class="fill-slate-400 text-[10px] font-medium">W3</text>
+                        <text x="198" y="112" text-anchor="middle" class="fill-slate-400 text-[10px] font-medium">H3</text>
                     </g>
                     <g>
                         <rect x="258" y="32" width="24" height="58" rx="4" class="fill-slate-900 transition-all duration-300"/>
                         <rect x="258" y="14" width="24" height="16" rx="3" class="fill-slate-200 transition-all duration-300"/>
                         <circle cx="270" cy="6" r="3" class="fill-emerald-500"/>
-                        <text x="270" y="112" text-anchor="middle" class="fill-slate-900 text-[10px] font-bold">W4</text>
+                        <text x="270" y="112" text-anchor="middle" class="fill-slate-900 text-[10px] font-bold">H4</text>
                     </g>
                 </svg>
             </div>
             <div class="flex items-center justify-center gap-6 mt-3 pt-3 border-t border-slate-50">
                 <div class="flex items-center gap-2">
                     <span class="w-2.5 h-2.5 rounded-full bg-slate-900"></span>
-                    <span class="text-xs text-slate-600 font-medium">Cash (72%)</span>
+                    <span class="text-xs text-slate-600 font-medium">Naqad Cash (72%)</span>
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="w-2.5 h-2.5 rounded-full bg-slate-200"></span>
-                    <span class="text-xs text-slate-600 font-medium">Udhaar (28%)</span>
+                    <span class="text-xs text-slate-600 font-medium">Udhaar Khata (28%)</span>
                 </div>
             </div>
         </section>
@@ -656,28 +661,28 @@
                 <span class="material-symbols-outlined text-emerald-400 text-[20px]">auto_awesome</span>
             </div>
             <div>
-                <h4 class="font-semibold text-sm">Munshi AI Tajziya</h4>
+                <h4 class="font-semibold text-sm">Munshi AI Mashwara</h4>
                 <p class="text-slate-300 text-xs mt-1 leading-relaxed">
-                    Weekend demand for Guard Basmati Rice and Cooking Oil spikes by 35%. Restock Tapal Tea before tomorrow morning.
+                    Haftay kay aakhir par Guard Basmati Chawal aur Cooking Oil ki maang 35% barh jaati hai. Kal subah se pehle Tapal Chai ka stock mangwa lein.
                 </p>
             </div>
         </section>
 
         <!-- Export Actions -->
         <section class="grid grid-cols-2 gap-3">
-            <button onclick="showToast('PDF Karobari Report downloaded!')"
+            <button onclick="showToast('Karobari PDF Report download ho gayi!')"
                 class="soft-card py-3.5 rounded-2xl text-xs font-semibold text-slate-900 flex items-center justify-center gap-2 active:scale-95 transition-transform">
-                <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> Export PDF
+                <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> PDF Report Nikalein
             </button>
-            <button onclick="showToast('Summary shared to Haji Tariq WhatsApp!')"
+            <button onclick="showToast('Khulasa Haji Tariq kay WhatsApp par bhej diya!')"
                 class="bg-emerald-600 text-white py-3.5 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform">
-                <span class="material-symbols-outlined text-[18px]">share</span> WhatsApp Report
+                <span class="material-symbols-outlined text-[18px]">share</span> WhatsApp Par Bhejein
             </button>
         </section>
     </main>
 
     <!-- ==========================================
-         BOTTOM NAVIGATION BAR
+         BOTTOM NAVIGATION BAR (ROAMN URDU)
          ========================================== -->
     <nav class="fixed bottom-0 max-w-md w-full glass-nav px-6 py-3.5 pb-6 flex justify-between items-center z-40">
         <button onclick="switchTab('home')" id="nav-home"
@@ -688,7 +693,7 @@
         <button onclick="switchTab('stock')" id="nav-stock"
             class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-900 transition-colors">
             <span class="material-symbols-outlined text-[24px]">inventory_2</span>
-            <span class="text-[10px] font-medium leading-none">Stock</span>
+            <span class="text-[10px] font-medium leading-none">Godown</span>
         </button>
         <button onclick="switchTab('bikri')" id="nav-bikri"
             class="w-14 h-14 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-lg -mt-8 hover:scale-105 active:scale-95 transition-all duration-200 ring-4 ring-[#FAFAFA]">
@@ -697,7 +702,7 @@
         <button onclick="switchTab('udhaar')" id="nav-udhaar"
             class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-900 transition-colors">
             <span class="material-symbols-outlined text-[24px]">menu_book</span>
-            <span class="text-[10px] font-medium leading-none">Udhaar</span>
+            <span class="text-[10px] font-medium leading-none">Khata</span>
         </button>
         <button onclick="switchTab('packages')" id="nav-packages"
             class="nav-btn flex flex-col items-center gap-1 text-slate-400 hover:text-slate-900 transition-colors">
@@ -707,31 +712,31 @@
     </nav>
 
     <!-- ==========================================
-         MODALS
+         MODALS (ROMAN URDU)
          ========================================== -->
 
     <!-- Wasooli Modal -->
     <div id="modal-wasooli" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden items-end sm:items-center justify-center p-4">
         <div class="bg-white rounded-[2rem] p-6 w-full max-w-sm shadow-2xl space-y-4">
             <div class="flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-slate-900">Record Wasooli</h3>
+                <h3 class="text-lg font-semibold text-slate-900">Wasooli Darj Karein</h3>
                 <button onclick="closeModal('modal-wasooli')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
                     <span class="material-symbols-outlined text-[18px]">close</span>
                 </button>
             </div>
             <div class="space-y-3">
                 <div>
-                    <label class="text-xs font-semibold text-slate-600">Select Customer</label>
+                    <label class="text-xs font-semibold text-slate-600">Grahak Chunein</label>
                     <select id="wasooli-customer-select" class="mt-1 w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-semibold text-slate-900 outline-none"></select>
                 </div>
                 <div>
-                    <label class="text-xs font-semibold text-slate-600">Amount Received (Rs.)</label>
-                    <input id="wasooli-amount-input" type="number" placeholder="e.g. 2000"
+                    <label class="text-xs font-semibold text-slate-600">Wasooli Raqam (Rs.)</label>
+                    <input id="wasooli-amount-input" type="number" placeholder="Misaal: 2000"
                         class="mt-1 w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-lg font-bold text-emerald-600 outline-none">
                 </div>
             </div>
             <button onclick="submitWasooli()" class="w-full py-3.5 rounded-2xl bg-slate-900 text-white font-semibold text-sm shadow-md active:scale-95 transition-transform">
-                Confirm Wasooli
+                Wasooli Mahfooz Karein
             </button>
         </div>
     </div>
@@ -740,19 +745,19 @@
     <div id="modal-new-customer" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden items-end sm:items-center justify-center p-4">
         <div class="bg-white rounded-[2rem] p-6 w-full max-w-sm shadow-2xl space-y-4">
             <div class="flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-slate-900">New Khata Account</h3>
+                <h3 class="text-lg font-semibold text-slate-900">Naya Khata Account Kholein</h3>
                 <button onclick="closeModal('modal-new-customer')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
                     <span class="material-symbols-outlined text-[18px]">close</span>
                 </button>
             </div>
             <div class="space-y-3">
-                <input id="new-cust-name"  type="text"   placeholder="Full Name (e.g. Aslam Tailor)"       class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
-                <input id="new-cust-role"  type="text"   placeholder="Shop / Reference (e.g. G-9 Market)"  class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
+                <input id="new-cust-name"  type="text"   placeholder="Pura Naam (Misaal: Aslam Darzi)"       class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
+                <input id="new-cust-role"  type="text"   placeholder="Dukaan ya Hawala (Misaal: G-9 Market)"  class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
                 <input id="new-cust-phone" type="tel"    placeholder="Mobile Number (03XX-XXXXXXX)"         class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
-                <input id="new-cust-bal"   type="number" placeholder="Opening Udhaar Balance (Rs.)" value="0" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
+                <input id="new-cust-bal"   type="number" placeholder="Shuruati Udhaar Baqiya (Rs.)" value="0" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
             </div>
             <button onclick="submitNewCustomer()" class="w-full py-3.5 rounded-2xl bg-slate-900 text-white font-semibold text-sm shadow-md active:scale-95 transition-transform">
-                Create Khata
+                Khata Shuru Karein
             </button>
         </div>
     </div>
@@ -761,29 +766,29 @@
     <div id="modal-new-product" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden items-end sm:items-center justify-center p-4">
         <div class="bg-white rounded-[2rem] p-6 w-full max-w-sm shadow-2xl space-y-4">
             <div class="flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-slate-900">Add Product to Godown</h3>
+                <h3 class="text-lg font-semibold text-slate-900">Godown Mein Naya Maal Daalein</h3>
                 <button onclick="closeModal('modal-new-product')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
                     <span class="material-symbols-outlined text-[18px]">close</span>
                 </button>
             </div>
             <div class="space-y-3">
-                <input id="new-prod-name"  type="text"   placeholder="Item Name (e.g. National Masala)"    class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
+                <input id="new-prod-name"  type="text"   placeholder="Cheez Ka Naam (Misaal: National Masala)"    class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
                 <div class="grid grid-cols-2 gap-2">
                     <select id="new-prod-cat" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-medium outline-none">
-                        <option value="Grain & Pulses">Daalein & Chawal</option>
-                        <option value="Ghee & Oil">Ghee & Oil</option>
-                        <option value="Tea & Dairy">Chai & Dairy</option>
+                        <option value="Daal Chawal">Daalein Aur Chawal</option>
+                        <option value="Ghee Aur Tail">Ghee Aur Tail</option>
+                        <option value="Chai Aur Doodh">Chai Aur Doodh</option>
                     </select>
-                    <input id="new-prod-unit" type="text" placeholder="Unit (Pack / KG)" value="Pack" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs outline-none">
+                    <input id="new-prod-unit" type="text" placeholder="Unit (Peti / KG / Dabba)" value="Dabba" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs outline-none">
                 </div>
                 <div class="grid grid-cols-2 gap-2">
-                    <input id="new-prod-cost"  type="number" placeholder="Cost Price (Rs.)"  class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
-                    <input id="new-prod-sell"  type="number" placeholder="Sell Price (Rs.)"  class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
+                    <input id="new-prod-cost"  type="number" placeholder="Kharid Qaymat (Rs.)"  class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
+                    <input id="new-prod-sell"  type="number" placeholder="Bikri Qaymat (Rs.)"   class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
                 </div>
-                <input id="new-prod-stock" type="number" placeholder="Opening Stock Quantity" value="20" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
+                <input id="new-prod-stock" type="number" placeholder="Shuruati Stock Tadaad" value="20" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none">
             </div>
             <button onclick="submitNewProduct()" class="w-full py-3.5 rounded-2xl bg-slate-900 text-white font-semibold text-sm shadow-md active:scale-95 transition-transform">
-                Save Product
+                Maal Mahfooz Karein
             </button>
         </div>
     </div>
@@ -793,7 +798,7 @@
         <div class="bg-white rounded-[2rem] p-6 w-full max-w-sm shadow-2xl space-y-4">
             <div class="flex justify-between items-center">
                 <div>
-                    <h3 class="text-lg font-semibold text-slate-900" id="detail-cust-name">Customer</h3>
+                    <h3 class="text-lg font-semibold text-slate-900" id="detail-cust-name">Grahak</h3>
                     <p class="text-xs text-slate-400" id="detail-cust-phone">+92 300 0000000</p>
                 </div>
                 <button onclick="closeModal('modal-customer-detail')" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
@@ -801,18 +806,18 @@
                 </button>
             </div>
             <div class="bg-slate-50 rounded-2xl p-4 space-y-2 border border-slate-100">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Roman Urdu WhatsApp Reminder</span>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Roman Urdu WhatsApp Yaad-dihani</span>
                 <p class="text-xs text-slate-700 leading-relaxed" id="detail-wa-message"></p>
             </div>
             <div class="space-y-1.5 max-h-40 overflow-y-auto pr-1" id="detail-ledger-list"></div>
             <div class="grid grid-cols-2 gap-2.5 pt-1">
                 <button onclick="copyReminderText()"
                     class="py-3 rounded-xl bg-slate-100 text-slate-800 text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95">
-                    <span class="material-symbols-outlined text-[16px]">content_copy</span> Copy Text
+                    <span class="material-symbols-outlined text-[16px]">content_copy</span> Copy Karein
                 </button>
                 <button onclick="sendWhatsAppReminder()"
                     class="py-3 rounded-xl bg-emerald-600 text-white text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95">
-                    <span class="material-symbols-outlined text-[16px]">chat</span> Send Alert
+                    <span class="material-symbols-outlined text-[16px]">chat</span> WhatsApp Bhejein
                 </button>
             </div>
         </div>
@@ -826,26 +831,26 @@
             </div>
             <div>
                 <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Madina Kiryana Store</span>
-                <h3 class="text-xl font-bold text-slate-900 mt-0.5" id="receipt-title">Sale Confirmed!</h3>
+                <h3 class="text-xl font-bold text-slate-900 mt-0.5" id="receipt-title">Bikri Mukammal Ho Gayi!</h3>
             </div>
             <div class="bg-slate-50 rounded-2xl p-4 text-left space-y-2 text-xs border border-slate-100" id="receipt-body"></div>
             <div class="grid grid-cols-2 gap-2.5">
-                <button onclick="showToast('Sent to Thermal Printer!'); closeModal('modal-receipt')"
+                <button onclick="showToast('Thermal Printer par bhej diya gaya!'); closeModal('modal-receipt')"
                     class="py-3 rounded-xl bg-slate-100 text-slate-800 text-xs font-semibold flex items-center justify-center gap-1.5">
-                    <span class="material-symbols-outlined text-[16px]">print</span> Print Parchi
+                    <span class="material-symbols-outlined text-[16px]">print</span> Parchi Print Karein
                 </button>
                 <button onclick="closeModal('modal-receipt')" class="py-3 rounded-xl bg-slate-900 text-white text-xs font-semibold">
-                    Done
+                    Theek Hai (Done)
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Global Toast -->
+    <!-- Global Toast Notification -->
     <div id="global-toast"
         class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-medium opacity-0 pointer-events-none transition-all duration-300 min-w-[260px] justify-center">
         <span class="material-symbols-outlined text-emerald-400 text-[18px]">check_circle</span>
-        <span id="global-toast-text">Action completed</span>
+        <span id="global-toast-text">Kamyabi se ho gaya</span>
     </div>
 
 </div><!-- /app shell -->
@@ -854,8 +859,7 @@
      JAVASCRIPT — Load order matters
      ============================================= -->
 <script src="js/state.js"></script>
-<script src="js/api.js"></script>
-<script src="js/parser.js"></script>
+<script src="js/voice.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/home.js"></script>
 <script src="js/stock.js"></script>
@@ -867,4 +871,3 @@
 
 </body>
 </html>
-

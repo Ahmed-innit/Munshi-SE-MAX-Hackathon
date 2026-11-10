@@ -1,39 +1,151 @@
 /* ============================================================
-   Munshi AI — Voice AI & Home View (Compliant with Module D)
-   Connected to MunshiParser & Supabase Sync Engine
+   Munshi AI — Awaaz Aur Home View (Roman Urdu)
+   With Natural Language Parser connected directly to the Database,
+   precise calculation based on database prices & quantities,
+   and edge cases for items/customers not present in DB.
    ============================================================ */
 
-function toggleVoiceRecording() {
-    state.isRecording = !state.isRecording;
+// Web Speech Recognition Controller (Browser Native Free API)
+let speechRecognizer = null;
+
+function initSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        console.warn('Web Speech API is not supported in this browser.');
+        return null;
+    }
+
+    const recognition = new SpeechRecognition();
+    // Urdu (Pakistan) recognition natively built-in
+    recognition.lang = 'ur-PK';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = function () {
+        state.isRecording = true;
+        const btn   = document.getElementById('home-mic-btn');
+        const title = document.getElementById('voice-status-title');
+        const sub   = document.getElementById('voice-status-sub');
+        if (btn) {
+            btn.classList.add('mic-pulse', 'bg-red-600');
+            btn.classList.remove('bg-slate-900');
+        }
+        if (title) title.innerText = 'Suniye... Ab Urdu Mein Bolein';
+        if (sub) sub.innerText   = 'Aap ki awaaz Roman Urdu mein convert ho rahi hai...';
+        showToast('Mic on hai: Urdu mein bolein...');
+    };
+
+    recognition.onresult = function (event) {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            transcript += event.results[i][0].transcript;
+        }
+
+        if (transcript.trim()) {
+            // Transliterate native Urdu audio speech directly into Roman Urdu
+            const romanUrdu = window.UrduTransliteration
+                ? window.UrduTransliteration.toRomanUrdu(transcript)
+                : transcript;
+
+            const input = document.getElementById('ai-command-input');
+            if (input) {
+                input.value = romanUrdu;
+            }
+
+            const sub = document.getElementById('voice-status-sub');
+            if (sub) {
+                sub.innerText = `Suna gaya: "${romanUrdu}"`;
+            }
+        }
+    };
+
+    recognition.onerror = function (event) {
+        console.error('Speech Recognition Error:', event.error);
+        stopVoiceRecordingUI();
+        if (event.error === 'not-allowed') {
+            showToast('Microphone ki ijazat (permission) nahi mili.');
+        } else if (event.error === 'no-speech') {
+            showToast('Koi awaaz nahi suni gayi.');
+        } else {
+            showToast(`Voice error: ${event.error}`);
+        }
+    };
+
+    recognition.onend = function () {
+        stopVoiceRecordingUI();
+        const input = document.getElementById('ai-command-input');
+        if (input && input.value.trim()) {
+            showToast('Awaaz kamyabi se Roman Urdu mein likh li gayi!');
+            // Automatically process the transcribed Roman Urdu command into DB confirmation card
+            processAICommand();
+        }
+    };
+
+    return recognition;
+}
+
+function stopVoiceRecordingUI() {
+    state.isRecording = false;
     const btn   = document.getElementById('home-mic-btn');
     const title = document.getElementById('voice-status-title');
     const sub   = document.getElementById('voice-status-sub');
-
-    if (state.isRecording) {
-        btn.classList.add('mic-pulse', 'bg-red-600');
-        btn.classList.remove('bg-slate-900');
-        title.innerText = 'Listening... Speak now';
-        sub.innerText   = 'Bol kar hisaab likhwaein...';
-
-        // Auto-simulate sample voice input after 2.2s
-        setTimeout(() => {
-            if (!state.isRecording) return;
-            toggleVoiceRecording();
-            const samples = [
-                'Ali ko 2 kg chawal udhaar par diya',
-                'Ali ne 500 diya',
-                'Aata 20 kilo aya hai, 150 rupay kilo',
-                'Chawal 5 kg becha, 300 rupay kilo'
-            ];
-            document.getElementById('ai-command-input').value =
-                samples[Math.floor(Math.random() * samples.length)];
-            processAICommand();
-        }, 2200);
-    } else {
+    if (btn) {
         btn.classList.remove('mic-pulse', 'bg-red-600');
         btn.classList.add('bg-slate-900');
-        title.innerText = 'Tap to speak in Urdu';
-        sub.innerText   = '"Ali ko 2 kg chawal udhaar par diya" or "Ali ne 500 diya"';
+    }
+    if (title) title.innerText = 'Bol kar hisaab darj karein';
+    if (sub) sub.innerText   = '"Bhai Tariq ko 500 udhaar diya" ya "2kg cheeni naqad bechi"';
+}
+
+function toggleVoiceRecording() {
+    // If browser supports Web Speech API
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!speechRecognizer && SpeechRecognition) {
+        speechRecognizer = initSpeechRecognition();
+    }
+
+    if (speechRecognizer) {
+        if (state.isRecording) {
+            speechRecognizer.stop();
+        } else {
+            try {
+                speechRecognizer.start();
+            } catch (err) {
+                console.warn('Recognition already started or error:', err);
+                speechRecognizer.stop();
+            }
+        }
+    } else {
+        // Fallback simulation if running in an unsupported environment
+        state.isRecording = !state.isRecording;
+        const btn   = document.getElementById('home-mic-btn');
+        const title = document.getElementById('voice-status-title');
+        const sub   = document.getElementById('voice-status-sub');
+
+        if (state.isRecording) {
+            btn.classList.add('mic-pulse', 'bg-red-600');
+            btn.classList.remove('bg-slate-900');
+            title.innerText = 'Suniye... Ab Awaaz Mein Bolein';
+            sub.innerText   = 'Awaaz suni ja rahi hai...';
+
+            setTimeout(() => {
+                if (!state.isRecording) return;
+                stopVoiceRecordingUI();
+                const samples = [
+                    'Bhai Tariq ko 500 rupay udhaar diya',
+                    'Chaudhry Bashir ne 2000 wasooli di',
+                    '2 Tapal Chai aur 3kg Cheeni naqad bechi',
+                    'Sabun 10 dabba naqad becha'
+                ];
+                const spoken = samples[Math.floor(Math.random() * samples.length)];
+                document.getElementById('ai-command-input').value = spoken;
+                processAICommand();
+            }, 2400);
+        } else {
+            stopVoiceRecordingUI();
+        }
     }
 }
 
@@ -42,141 +154,303 @@ function prefillAICommand(cmd) {
     processAICommand();
 }
 
+/**
+ * Intelligent Parser connected with the Database:
+ * Parses Urdu numerals & quantities, matches products in database,
+ * calculates exact total based on real DB prices,
+ * and handles edge case when customer/product is not found in database.
+ */
 function processAICommand() {
     const input = document.getElementById('ai-command-input');
     const text  = input.value.trim();
     if (!text) return;
 
-    if (!window.MunshiParser) {
-        showToast('Parser loading...');
-        return;
-    }
+    const lower = text.toLowerCase();
 
-    const draft = window.MunshiParser.parseCommand(text, state.customers, state.products);
+    // 1. Check for Wasooli (Payment Received)
+    const isWasooli = lower.includes('wasool') || lower.includes('diya cash') || 
+                      lower.includes('wapis') || lower.includes('aayi') || lower.includes('jama');
 
-    // 1. QUERY INTENT (TC-PAR-09)
-    if (draft.intent === 'QUERY') {
-        input.value = '';
-        if (draft.customerName) {
-            const cust = state.customers.find(c => String(c.id) === String(draft.customerId)) ||
-                         state.customers.find(c => c.name.toLowerCase().includes(draft.customerName.toLowerCase()));
-            const bal = cust ? cust.balance : 0;
-            showToast(`${cust ? cust.name : draft.customerName} ka baqiya udhaar: Rs. ${bal.toLocaleString()}`);
-        } else {
-            const total = state.customers.reduce((s, c) => s + c.balance, 0);
-            showToast(`Kul baqiya udhaar: Rs. ${total.toLocaleString()}`);
+    // 2. Check for Udhaar (Credit)
+    const isUdhaar = lower.includes('udhaar') || lower.includes('khata') || 
+                     lower.includes('likho') || lower.includes('baqiya');
+
+    // 3. Find Customer in Database
+    let matchedCustomer = null;
+    for (const c of state.customers) {
+        const parts = c.name.toLowerCase().split(' ');
+        for (const p of parts) {
+            if (p.length > 2 && lower.includes(p)) {
+                matchedCustomer = c;
+                break;
+            }
         }
-        return;
+        if (matchedCustomer) break;
     }
 
-    // 2. REPORT INTENT (TC-PAR-10)
-    if (draft.intent === 'REPORT') {
-        input.value = '';
-        switchTab('reports');
-        showToast(`Aaj ki kul bikri: Rs. ${state.cashSalesToday.toLocaleString()}`);
-        return;
-    }
+    // Edge Case: If Udhaar or Wasooli requested but customer not found in DB
+    if ((isWasooli || isUdhaar) && !matchedCustomer) {
+        // Look for candidate name after 'ko' or before 'ne'
+        let candidateName = 'Naya Grahak';
+        const matchName = text.match(/([a-zA-Z\s]+)\s+(ko|ne)/i);
+        if (matchName && matchName[1]) {
+            candidateName = matchName[1].trim();
+        }
 
-    // 3. UNKNOWN OR CLARIFYING QUESTION (TC-PAR-07, TC-PAR-20, TC-PAR-22, TC-PAR-23)
-    if (draft.intent === 'UNKNOWN' || draft.intent === 'AMBIGUOUS' || draft.clarifyingQuestion) {
+        const numMatch = text.match(/\d+/g);
+        const enteredAmt = numMatch ? parseInt(numMatch[numMatch.length - 1], 10) : 0;
+
         state.pendingAI = {
-            draft,
-            isQuestion: true,
-            questionText: draft.clarifyingQuestion || 'Samajh nahi aya. Dobara likhein ya manual entry karein.',
-            candidates: draft.candidateCustomers || [],
+            isEdgeCase: true,
+            edgeCaseType: 'customer_not_found',
+            candidateName: candidateName,
+            amount: enteredAmt,
+            type: isUdhaar ? 'udhaar' : 'wasooli',
+            label: 'Grahak Database Mein Mojood Nahi',
+            rawText: `"${text}"`,
+            message: `Grahak "${candidateName}" database mein nahi mila. Pehle naya khata kholein ya sahi naam darj karein.`
+        };
+
+        input.value = '';
+        renderPendingAICard();
+        showToast('Grahak database mein nahi mila!');
+        return;
+    }
+
+    // Handle Wasooli with matched customer
+    if (isWasooli) {
+        const numMatch = text.match(/\d+/g);
+        const amount = numMatch ? parseInt(numMatch[numMatch.length - 1], 10) : 0;
+        if (amount <= 0) {
+            showToast('Bara-e-meherbani wasooli ki raqam batayein');
+            return;
+        }
+
+        state.pendingAI = {
+            isEdgeCase: false,
+            customerId: matchedCustomer.id,
+            customerName: `${matchedCustomer.name} (${matchedCustomer.role})`,
+            amount: amount,
+            type: 'wasooli',
+            label: 'Wasooli Mili (Paisa Aaya)',
             rawText: `"${text}"`
         };
         input.value = '';
         renderPendingAICard();
+        showToast(`Wasooli Rs. ${amount} tasdeeq kay liye tayyar hai`);
         return;
     }
 
-    // 4. ACTIONABLE DRAFT (TC-PAR-01 to TC-PAR-06, TC-PAR-25)
+    // Handle pure Udhaar without item listing (e.g., "Bhai Tariq ko 500 udhaar diya")
+    const isDirectCashCredit = isUdhaar && (lower.includes('rupay') || lower.includes('rs') || !hasAnyProductKeywords(lower));
+    if (isDirectCashCredit && matchedCustomer) {
+        const numMatch = text.match(/\d+/g);
+        const amount = numMatch ? parseInt(numMatch[numMatch.length - 1], 10) : 500;
+
+        state.pendingAI = {
+            isEdgeCase: false,
+            customerId: matchedCustomer.id,
+            customerName: `${matchedCustomer.name} (${matchedCustomer.role})`,
+            amount: amount,
+            type: 'udhaar',
+            label: 'Naya Udhaar (Naqad/Khata)',
+            rawText: `"${text}"`
+        };
+        input.value = '';
+        renderPendingAICard();
+        showToast(`Udhaar Rs. ${amount} tasdeeq kay liye tayyar hai`);
+        return;
+    }
+
+    // 4. Parse Sale / Items from Database
+    // Parse quantities and products
+    const parsedSale = parseProductsFromText(text, lower);
+
+    // Edge Case: No products matched in database
+    if (parsedSale.items.length === 0) {
+        const numMatch = text.match(/\d+/g);
+        const fallbackAmt = numMatch ? parseInt(numMatch[0], 10) : 0;
+
+        state.pendingAI = {
+            isEdgeCase: true,
+            edgeCaseType: 'product_not_found',
+            rawQuery: text,
+            amount: fallbackAmt,
+            type: isUdhaar ? 'udhaar' : 'sale',
+            label: 'Maal Database Mein Mojood Nahi',
+            rawText: `"${text}"`,
+            message: `Aap kay jumlay mein se koi bhi cheez godown database se match nahi hui. Sahi naam (Misaal: Cheeni, Chai, Ghee, Chawal) bolein ya pehle naya maal darj karein.`
+        };
+        input.value = '';
+        renderPendingAICard();
+        showToast('Maal database mein nahi mila!');
+        return;
+    }
+
+    // Edge Case: Check for stock sufficiency in Database
+    const outOfStockItems = [];
+    for (const item of parsedSale.items) {
+        if (item.product.stock < item.qty) {
+            outOfStockItems.push(`${item.product.name} (Baqiya Stock: ${item.product.stock} ${item.product.unit})`);
+        }
+    }
+
+    const calculatedTotal = parsedSale.total;
+    const itemSummary = parsedSale.items.map(i => `${i.qty} ${i.product.unit} ${i.product.name.split('(')[0].trim()}`).join(', ');
+
     state.pendingAI = {
-        draft,
-        isQuestion: false,
-        intent: draft.intent,
-        customerId: draft.customerId,
-        customerName: draft.customerName,
-        productId: draft.productId,
-        productName: draft.productName,
-        quantity: draft.quantity || 1,
-        quantityBase: draft.quantityBase || 1,
-        unit: draft.unit || 'unit',
-        unitPrice: draft.unitPricePaisa ? draft.unitPricePaisa / 100 : (draft.totalPaisa ? (draft.totalPaisa / 100) / (draft.quantity || 1) : 100),
-        total: draft.totalPaisa ? draft.totalPaisa / 100 : 100,
-        paymentMethod: draft.paymentMethod || 'CASH',
+        isEdgeCase: outOfStockItems.length > 0,
+        edgeCaseType: outOfStockItems.length > 0 ? 'insufficient_stock' : null,
+        outOfStockMessage: outOfStockItems.join(', '),
+        customerId: isUdhaar && matchedCustomer ? matchedCustomer.id : null,
+        customerName: isUdhaar && matchedCustomer ? `${matchedCustomer.name} (${matchedCustomer.role})` : 'Aam Grahak (Naqad)',
+        items: parsedSale.items,
+        amount: calculatedTotal,
+        type: isUdhaar ? 'udhaar' : 'sale',
+        label: isUdhaar ? 'Udhaar Bikri' : 'Naqad Bikri (Cash Sale)',
+        itemSummary: itemSummary,
         rawText: `"${text}"`
     };
 
     input.value = '';
     renderPendingAICard();
-    showToast('Munshi AI ne hisaab tayyar kiya — Tasdeeq karein');
+    showToast(`Asal Hisaab: Rs. ${calculatedTotal} (${parsedSale.items.length} cheezein)`);
 }
 
-function selectCandidateCustomer(custId, custName) {
-    if (!state.pendingAI || !state.pendingAI.draft) return;
-    const draft = state.pendingAI.draft;
-    draft.customerId = custId;
-    draft.customerName = custName;
-    draft.clarifyingQuestion = null;
-    draft.isAmbiguous = false;
-    draft.intent = draft.intent === 'AMBIGUOUS' ? 'SALE_UDHAAR' : draft.intent;
+// Helper: Check if text contains product names
+function hasAnyProductKeywords(lower) {
+    for (const p of state.products) {
+        if (lower.includes(p.name.toLowerCase().split(' ')[0])) return true;
+        if (p.aliases && p.aliases.some(a => lower.includes(a))) return true;
+    }
+    return false;
+}
 
-    state.pendingAI = {
-        draft,
-        isQuestion: false,
-        intent: draft.intent,
-        customerId: custId,
-        customerName: custName,
-        productId: draft.productId,
-        productName: draft.productName,
-        quantity: draft.quantity || 1,
-        quantityBase: draft.quantityBase || 1,
-        unit: draft.unit || 'unit',
-        unitPrice: draft.unitPricePaisa ? draft.unitPricePaisa / 100 : (draft.totalPaisa ? (draft.totalPaisa / 100) / (draft.quantity || 1) : 100),
-        total: draft.totalPaisa ? draft.totalPaisa / 100 : 100,
-        paymentMethod: 'UDHAAR',
-        rawText: draft.rawText
+// Match items from database and compute actual sum: (quantity * DB price)
+function parseProductsFromText(text, lower) {
+    const matched = [];
+    let grandTotal = 0;
+
+    // Word to number mapping
+    const wordNums = {
+        'ek': 1, 'aik': 1, 'one': 1,
+        'do': 2, 'two': 2,
+        'teen': 3, 'three': 3,
+        'char': 4, 'chaar': 4, 'four': 4,
+        'paanch': 5, 'panch': 5, 'five': 5,
+        'che': 6, 'chhay': 6, 'six': 6,
+        'saat': 7, 'seven': 7,
+        'aath': 8, 'eight': 8,
+        'nau': 9, 'nao': 9, 'nine': 9,
+        'das': 10, 'ten': 10
     };
-    renderPendingAICard();
+
+    // Sort products by longest alias first to prevent substring collision
+    const sortedProducts = [...state.products].sort((a, b) => b.name.length - a.name.length);
+
+    for (const prod of sortedProducts) {
+        const searchTerms = [prod.name.toLowerCase(), ...(prod.aliases || [])];
+        let foundTerm = null;
+
+        for (const term of searchTerms) {
+            if (lower.includes(term)) {
+                foundTerm = term;
+                break;
+            }
+        }
+
+        if (foundTerm) {
+            // Find quantity preceding the product term
+            // e.g. "2kg cheeni", "3 tapal", "paanch dabba doodh"
+            const regex = new RegExp(`(\\d+(\\.\\d+)?|ek|aik|do|teen|chaar|char|paanch|panch|che|saat|aath|das)\\s*(kg|kilo|pack|bori|peti|dabba)?\\s*${foundTerm}`, 'i');
+            const match = text.match(regex);
+
+            let qty = 1;
+            if (match && match[1]) {
+                const rawNum = match[1].toLowerCase();
+                if (wordNums[rawNum]) {
+                    qty = wordNums[rawNum];
+                } else if (!isNaN(parseFloat(rawNum))) {
+                    qty = parseFloat(rawNum);
+                }
+            } else {
+                // Check if any standalone number precedes it in a 3-word window
+                const words = lower.split(/\s+/);
+                const termIndex = words.findIndex(w => w.includes(foundTerm));
+                if (termIndex > 0) {
+                    const prevWord = words[termIndex - 1];
+                    if (wordNums[prevWord]) qty = wordNums[prevWord];
+                    else if (!isNaN(parseFloat(prevWord))) qty = parseFloat(prevWord);
+                }
+            }
+
+            const itemTotal = Math.round(qty * prod.price);
+            grandTotal += itemTotal;
+
+            matched.push({
+                product: prod,
+                qty: qty,
+                unitPrice: prod.price,
+                total: itemTotal
+            });
+        }
+    }
+
+    // Fallback: If no products found by name, but user explicitly wrote "500 ki bikri"
+    if (matched.length === 0) {
+        const numMatch = text.match(/\d+/g);
+        if (numMatch && (lower.includes('bikri') || lower.includes('sale') || lower.includes('becha'))) {
+            const explicitAmt = parseInt(numMatch[numMatch.length - 1], 10);
+            return {
+                items: [],
+                total: explicitAmt
+            };
+        }
+    }
+
+    return {
+        items: matched,
+        total: grandTotal
+    };
 }
 
+// Render dynamic AI Card with Edge Case badges
 function renderPendingAICard() {
     const container = document.getElementById('ai-pending-container');
     if (!state.pendingAI) { container.innerHTML = ''; return; }
 
     const p = state.pendingAI;
 
-    // Render clarifying question / ambiguity resolution
-    if (p.isQuestion) {
-        const candidateBtns = p.candidates && p.candidates.length > 0
-            ? `<div class="flex flex-wrap gap-2 pt-1">
-                ${p.candidates.map(c => `
-                    <button onclick="selectCandidateCustomer('${c.id}', '${c.name}')"
-                        class="bg-white text-slate-900 px-3 py-1.5 rounded-xl text-xs font-semibold hover:bg-slate-100 active:scale-95 transition-all">
-                        ${c.name}
-                    </button>
-                `).join('')}
-               </div>`
-            : '';
-
+    // Edge Case: When Customer or Product was NOT found in Database
+    if (p.isEdgeCase) {
         container.innerHTML = `
-            <div class="bg-amber-950/90 text-amber-100 border border-amber-500/40 rounded-2xl p-5 shadow-lg flex flex-col gap-3 slide-up">
+            <div class="bg-amber-950/90 text-amber-100 border border-amber-500/50 rounded-2xl p-5 shadow-lg flex flex-col gap-3 slide-up">
                 <div class="flex justify-between items-center">
-                    <span class="text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 px-2.5 py-1 rounded-full">
-                        Wazahat Darkaar Hai
+                    <span class="text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-slate-950 px-2.5 py-1 rounded-full">
+                        Database Alert (Edge Case)
                     </span>
-                    <span class="text-xs text-amber-300/70 italic truncate max-w-[160px]">${p.rawText}</span>
+                    <span class="text-xs text-amber-300 italic truncate max-w-[160px]">${p.rawText}</span>
                 </div>
-                <div class="flex items-center gap-3">
-                    <span class="material-symbols-outlined text-amber-400 text-2xl">help</span>
-                    <p class="font-semibold text-sm leading-snug text-white">${p.questionText}</p>
+                <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-amber-400 text-2xl shrink-0 mt-0.5">warning</span>
+                    <div>
+                        <p class="font-bold text-sm text-white">${p.label}</p>
+                        <p class="text-xs text-amber-200/90 mt-1 leading-relaxed">${p.message || p.outOfStockMessage}</p>
+                    </div>
                 </div>
-                ${candidateBtns}
-                <div class="flex justify-end pt-2">
-                    <button onclick="dismissPendingAI()" class="text-xs text-amber-300 hover:text-white font-medium py-1 px-3 rounded-lg bg-white/10">
-                        Theek hai, dismiss
+                <div class="flex gap-2 pt-2">
+                    ${p.edgeCaseType === 'customer_not_found' ? `
+                        <button onclick="openNewCustomerModal(); dismissPendingAI();" class="flex-1 bg-amber-400 hover:bg-amber-300 text-slate-950 py-2.5 rounded-xl font-bold text-xs active:scale-95 transition-all">
+                            + Naya Khata Banayein
+                        </button>
+                    ` : ''}
+                    ${p.edgeCaseType === 'product_not_found' ? `
+                        <button onclick="openNewProductModal(); dismissPendingAI();" class="flex-1 bg-amber-400 hover:bg-amber-300 text-slate-950 py-2.5 rounded-xl font-bold text-xs active:scale-95 transition-all">
+                            + Godown Mein Maal Daalein
+                        </button>
+                    ` : ''}
+                    <button onclick="dismissPendingAI()" class="px-4 bg-white/10 hover:bg-white/20 text-white py-2.5 rounded-xl font-medium text-xs active:scale-95 transition-all">
+                        Khatam Karein
                     </button>
                 </div>
             </div>
@@ -184,212 +458,100 @@ function renderPendingAICard() {
         return;
     }
 
-    // Render editable confirmation card (TC-PAR-25, TC-REG-06)
-    const isUdhaar = p.intent === 'SALE_UDHAAR';
-    const isPayment = p.intent === 'PAYMENT_RECEIVED';
-    const isPurchase = p.intent === 'STOCK_PURCHASE';
-    const badgeColor = isUdhaar ? 'text-red-400' : (isPayment ? 'text-emerald-400' : 'text-blue-400');
-    const badgeLabel = isUdhaar ? 'Naya Udhaar' : (isPayment ? 'Wasooli' : (isPurchase ? 'Stock Khareed' : 'Cash Sale'));
+    const badgeColor = p.type === 'udhaar' ? 'text-red-400' : 'text-emerald-400';
 
     container.innerHTML = `
         <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-lg flex flex-col gap-4 slide-up">
             <div class="flex justify-between items-center">
                 <span class="text-[10px] font-semibold uppercase tracking-wider bg-white/10 text-slate-300 px-2.5 py-1 rounded-full">
-                    Tasdeeq Karein (Confirm Entry)
+                    Database Se Asal Rate Tasdeeq
                 </span>
                 <span class="text-xs text-slate-400 italic truncate max-w-[160px]">${p.rawText}</span>
             </div>
-
-            <div class="space-y-3 bg-white/5 p-3.5 rounded-xl text-xs">
-                ${p.customerName ? `
-                <div class="flex justify-between items-center">
-                    <span class="text-slate-400">Customer:</span>
-                    <strong class="text-white text-sm">${p.customerName}</strong>
-                </div>` : ''}
-
-                ${p.productName ? `
-                <div class="flex justify-between items-center">
-                    <span class="text-slate-400">Maal (Product):</span>
-                    <strong class="text-white text-sm">${p.productName}</strong>
+            <div class="flex items-start justify-between gap-4">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-white text-xl">database</span>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-base leading-snug">${p.customerName || p.itemSummary || 'Naqad Bikri'}</p>
+                        <p class="text-xs ${badgeColor} font-medium mt-0.5">${p.label}</p>
+                        ${p.items && p.items.length > 0 ? `
+                            <p class="text-[11px] text-slate-400 mt-1">
+                                ${p.items.map(i => `${i.qty}x ${i.product.name.split('(')[0]} @ Rs.${i.unitPrice}`).join(' + ')}
+                            </p>
+                        ` : ''}
+                    </div>
                 </div>
-                <div class="flex justify-between items-center">
-                    <span class="text-slate-400">Tadaad (Qty):</span>
-                    <div class="flex items-center gap-1.5">
-                        <input id="edit-draft-qty" type="number" step="0.5" value="${p.quantity}"
-                            onchange="onDraftQtyChange(this.value)"
-                            class="w-16 bg-white/10 text-white rounded px-2 py-0.5 text-right font-bold focus:outline-none focus:ring-1 focus:ring-white">
-                        <span class="text-slate-300">${p.unit}</span>
-                    </div>
-                </div>` : ''}
-
-                <div class="flex justify-between items-center pt-1 border-t border-white/10">
-                    <span class="text-slate-300 font-medium">Kul Raqam (Total):</span>
-                    <div class="flex items-center gap-1">
-                        <span class="text-slate-400">Rs.</span>
-                        <input id="edit-draft-total" type="number" value="${p.total}"
-                            class="w-24 bg-white/10 text-white rounded px-2 py-1 text-right font-bold text-base focus:outline-none focus:ring-1 focus:ring-white">
-                    </div>
+                <div class="text-right shrink-0">
+                    <span class="text-[10px] text-slate-400 block uppercase">Kul Hisaab</span>
+                    <p class="text-xl font-bold tracking-tight text-emerald-400">Rs. ${p.amount.toLocaleString()}</p>
                 </div>
             </div>
-
             <div class="grid grid-cols-3 gap-2 pt-1">
                 <button onclick="confirmPendingAI()"
-                    class="col-span-2 bg-white text-slate-900 py-2.5 rounded-xl font-semibold text-xs active:scale-95 transition-all flex items-center justify-center gap-1">
-                    <span class="material-symbols-outlined text-[16px]">check</span> Tasdeeq Karein (Save)
+                    class="col-span-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 py-2.5 rounded-xl font-bold text-xs active:scale-95 transition-all flex items-center justify-center gap-1 shadow-md">
+                    <span class="material-symbols-outlined text-[16px]">check</span> Database Mein Darj Karein
                 </button>
                 <button onclick="dismissPendingAI()"
-                    class="bg-slate-800 text-slate-300 py-2.5 rounded-xl font-medium text-xs active:scale-95 transition-all">
-                    Cancel
+                    class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl font-medium text-xs active:scale-95 transition-all">
+                    Khatam Karein
                 </button>
             </div>
         </div>
     `;
 }
 
-function onDraftQtyChange(newQty) {
-    if (!state.pendingAI) return;
-    const q = parseFloat(newQty) || 1;
-    state.pendingAI.quantity = q;
-    state.pendingAI.quantityBase = Math.round(q * (state.pendingAI.unit === 'kg' || state.pendingAI.unit === 'litre' ? 1000 : 1));
-    state.pendingAI.total = Math.round(q * state.pendingAI.unitPrice);
-    const totalInput = document.getElementById('edit-draft-total');
-    if (totalInput) totalInput.value = state.pendingAI.total;
-}
-
-async function confirmPendingAI() {
-    if (!state.pendingAI) return;
+function confirmPendingAI() {
+    if (!state.pendingAI || state.pendingAI.isEdgeCase) return;
     const p = state.pendingAI;
+    const c = state.customers.find(x => x.id === p.customerId);
 
-    // Read edited total from input if modified by user
-    const totalEl = document.getElementById('edit-draft-total');
-    const finalTotal = totalEl ? (parseFloat(totalEl.value) || p.total) : p.total;
-    const qtyEl = document.getElementById('edit-draft-qty');
-    const finalQty = qtyEl ? (parseFloat(qtyEl.value) || p.quantity) : p.quantity;
-
-    const cust = state.customers.find(x => String(x.id) === String(p.customerId));
-    const prod = state.products.find(x => String(x.id) === String(p.productId)) ||
-                 state.products.find(x => p.productName && x.name.toLowerCase().includes(p.productName.toLowerCase())) ||
-                 state.products[0];
-
-    const amountPaisa = Math.round(finalTotal * 100);
-    const unitPricePaisa = Math.round((finalTotal / (finalQty || 1)) * 100);
-    const quantityBase = Math.round((finalQty || 1) * (p.unit === 'kg' || p.unit === 'litre' ? 1000 : 1));
-
-    if (p.intent === 'PAYMENT_RECEIVED') {
-        state.wasooliToday += finalTotal;
-        if (cust) cust.balance = Math.max(0, cust.balance - finalTotal);
-        state.transactions.unshift({
-            id: window.api ? api.newId() : Date.now(),
-            title: cust ? cust.name : 'Customer',
-            subtitle: 'Voice AI Wasooli • Just now',
-            amount: finalTotal,
-            type: 'wasooli'
-        });
-
-        if (window.api && cust) {
-            await api.syncOperation('PAYMENT_RECEIVED', {
-                id: api.newId(),
-                customerId: String(cust.id),
-                amountPaisa: amountPaisa,
-                note: 'Voice AI Wasooli'
-            });
-            await api.loadBalances();
-        }
-    } else if (p.intent === 'STOCK_PURCHASE') {
-        if (prod) prod.stock += finalQty;
-        state.transactions.unshift({
-            id: window.api ? api.newId() : Date.now(),
-            title: prod ? prod.name : 'Stock Purchase',
-            subtitle: `Stock In • +${finalQty} ${p.unit || 'units'}`,
-            amount: finalTotal,
-            type: 'sale'
-        });
-
-        if (window.api && prod) {
-            await api.syncOperation('STOCK_PURCHASE', {
-                id: api.newId(),
-                productId: String(prod.id),
-                quantityBase: quantityBase,
-                unitCostPaisa: unitPricePaisa,
-                reason: 'Stock purchase via Munshi AI'
-            });
-            await api.loadStock();
-        }
-    } else if (p.intent === 'RETURN_ENTRY') {
-        if (prod) prod.stock += finalQty;
-        if (cust) cust.balance = Math.max(0, cust.balance - finalTotal);
-        state.transactions.unshift({
-            id: window.api ? api.newId() : Date.now(),
-            title: `${cust ? cust.name : 'Customer'} — Return`,
-            subtitle: `Return • ${prod ? prod.name : 'Maal'}`,
-            amount: finalTotal,
-            type: 'wasooli'
-        });
-
-        if (window.api) {
-            await api.syncOperation('RETURN_ENTRY', {
-                customerId: cust ? String(cust.id) : null,
-                productId: prod ? String(prod.id) : null,
-                quantityBase: quantityBase,
-                amountPaisa: amountPaisa,
-                reason: 'Customer return'
-            });
-            await api.loadStock();
-            await api.loadBalances();
-        }
-    } else {
-        // SALE_UDHAAR or SALE_CASH
-        const isUdhaar = p.intent === 'SALE_UDHAAR';
-        if (isUdhaar) {
-            state.nayaUdhaarToday += finalTotal;
-            if (cust) cust.balance += finalTotal;
-            state.transactions.unshift({
-                id: window.api ? api.newId() : Date.now(),
-                title: `${cust ? cust.name : 'Customer'} — ${prod ? prod.name.split('(')[0] : 'Kiryana'}`,
-                subtitle: 'Voice AI Udhaar • Just now',
-                amount: finalTotal,
-                type: 'udhaar'
-            });
-        } else {
-            state.cashSalesToday += finalTotal;
-            if (prod) prod.stock = Math.max(0, prod.stock - finalQty);
-            state.transactions.unshift({
-                id: window.api ? api.newId() : Date.now(),
-                title: prod ? prod.name : 'Naqad Bikri',
-                subtitle: 'Voice AI Cash Sale • Just now',
-                amount: finalTotal,
-                type: 'sale'
-            });
-        }
-
-        if (window.api && prod) {
-            const res = await api.syncOperation(isUdhaar ? 'SALE_UDHAAR' : 'SALE_CASH', {
-                id: api.newId(),
-                customerId: isUdhaar && cust ? String(cust.id) : null,
-                lines: [{
-                    productId: String(prod.id),
-                    quantityBase: quantityBase,
-                    unitPricePaisa: unitPricePaisa,
-                    totalPaisa: amountPaisa,
-                    productName: prod.name
-                }],
-                totalPaisa: amountPaisa,
-                paymentMethod: isUdhaar ? 'UDHAAR' : 'CASH',
-                createdAt: new Date().toISOString()
-            });
-
-            if (res.data && res.data.code === 'NEGATIVE_STOCK') {
-                showToast(`Stock rukawat: ${prod.name} godown mein mojood nahi!`);
-                return;
+    // If sale items are present, deduct real inventory from Database
+    if (p.items && p.items.length > 0) {
+        for (const item of p.items) {
+            const dbProduct = state.products.find(x => x.id === item.product.id);
+            if (dbProduct) {
+                dbProduct.stock = Math.max(0, +(dbProduct.stock - item.qty).toFixed(1));
             }
-            await api.loadStock();
-            await api.loadBalances();
         }
     }
 
+    if (p.type === 'udhaar') {
+        state.nayaUdhaarToday += p.amount;
+        if (c) c.balance += p.amount;
+        state.transactions.unshift({ 
+            id: Date.now(), 
+            title: p.itemSummary ? `${c ? c.name : 'Grahak'} — ${p.itemSummary}` : p.customerName, 
+            subtitle: 'AI Udhaar Darj • Abhi abhi', 
+            amount: p.amount, 
+            type: 'udhaar'  
+        });
+    } else if (p.type === 'wasooli') {
+        state.wasooliToday += p.amount;
+        if (c) c.balance = Math.max(0, c.balance - p.amount);
+        state.transactions.unshift({ 
+            id: Date.now(), 
+            title: p.customerName, 
+            subtitle: 'AI Wasooli Mili • Abhi abhi', 
+            amount: p.amount, 
+            type: 'wasooli' 
+        });
+    } else {
+        state.cashSalesToday += p.amount;
+        state.transactions.unshift({ 
+            id: Date.now(), 
+            title: p.itemSummary || 'Naqad Maal Becha', 
+            subtitle: 'AI Naqad Bikri • Abhi abhi', 
+            amount: p.amount, 
+            type: 'sale' 
+        });
+    }
+
     state.pendingAI = null;
+    persistDB(); // Persist directly to Database
     renderAll();
-    showToast('Saved to Khata & Godown Ledger!');
+    showToast('Database Mein Kamiyabi Se Mahfooz Ho Gaya!');
 }
 
 function dismissPendingAI() {
@@ -408,7 +570,7 @@ function setHomeTxFilter(filter) {
 }
 
 function renderHomeTransactions() {
-    const list     = document.getElementById('home-tx-list');
+    const list = document.getElementById('home-tx-list');
     const filtered = state.transactions.filter(t =>
         state.homeTxFilter === 'all' || t.type === state.homeTxFilter
     );

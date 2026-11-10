@@ -1,6 +1,6 @@
 /* ============================================================
-   Munshi AI — POS / Bikri (New Sale) View
-   Connected to Backend Synchronization Engine
+   Munshi AI — Counter / Bikri POS View (Roman Urdu)
+   Connected with Local Database Persistence
    ============================================================ */
 
 function setPosCustomerMode(mode) {
@@ -26,27 +26,21 @@ function setPosCustomerMode(mode) {
 function populatePosCustomerDropdown() {
     const sel = document.getElementById('pos-customer-select');
     if (!sel) return;
-    if (state.customers.length === 0) {
-        sel.innerHTML = '<option value="">No customers</option>';
-        return;
-    }
     sel.innerHTML = state.customers.map(c =>
-        `<option value="${c.id}" ${String(c.id) === String(state.posCustomerId) ? 'selected' : ''}>${c.name} (${c.role || 'Customer'})</option>`
+        `<option value="${c.id}" ${c.id == state.posCustomerId ? 'selected' : ''}>${c.name} (${c.role})</option>`
     ).join('');
     onPosCustomerChange();
 }
 
 function onPosCustomerChange() {
     const sel = document.getElementById('pos-customer-select');
-    if (!sel || !sel.value) return;
-    state.posCustomerId = sel.value;
-    const cust = state.customers.find(c => String(c.id) === String(state.posCustomerId));
+    if (!sel) return;
+    state.posCustomerId = parseInt(sel.value, 10);
+    const cust = state.customers.find(c => c.id === state.posCustomerId);
     if (cust) {
         const initials = cust.name.split(' ').map(w => w[0]).join('').slice(0, 2);
-        const initEl = document.getElementById('pos-cust-initials');
-        const prevBalEl = document.getElementById('pos-cust-prev-bal');
-        if (initEl) initEl.innerText = initials;
-        if (prevBalEl) prevBalEl.innerText = `Rs. ${cust.balance.toLocaleString()}`;
+        document.getElementById('pos-cust-initials').innerText    = initials;
+        document.getElementById('pos-cust-prev-bal').innerText    = `Rs. ${cust.balance.toLocaleString()}`;
     }
     updatePosContextBanner();
 }
@@ -58,7 +52,7 @@ function renderPosQuickPills() {
     const list = state.products.filter(p => p.name.toLowerCase().includes(q));
 
     container.innerHTML = list.map(p => `
-        <button onclick="addProductToPos('${p.id}')"
+        <button onclick="addProductToPos(${p.id})"
             class="shrink-0 bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-700 text-[11px] font-medium px-3 py-1.5 rounded-full transition-colors">
             + ${p.name.split('(')[0].trim()} (Rs.${p.price})
         </button>
@@ -66,29 +60,51 @@ function renderPosQuickPills() {
 }
 
 function addProductToPos(productId) {
-    const prod = state.products.find(p => String(p.id) === String(productId));
+    const prod = state.products.find(p => p.id === productId);
     if (!prod) return;
-    const existing = state.cart.find(c => String(c.productId) === String(productId));
+
+    // Edge Case: Check Stock in Database
+    if (prod.stock <= 0) {
+        showToast(`Maaf kijiye ga! ${prod.name.split('(')[0]} godown mein khatam ho chuka hai.`);
+        return;
+    }
+
+    const existing = state.cart.find(c => c.productId === productId);
     if (existing) {
+        if (existing.qty + 1 > prod.stock) {
+            showToast(`Godown mein sirf ${prod.stock} ${prod.unit} mojood hai!`);
+            return;
+        }
         existing.qty += 1;
     } else {
         state.cart.push({ productId: prod.id, name: prod.name, price: prod.price, qty: 1, unit: prod.unit });
     }
+
+    persistDB();
     if (state.activeTab !== 'bikri') switchTab('bikri');
     else renderPosCart();
-    showToast(`Added ${prod.name.split('(')[0]} to Bill`);
+    showToast(`${prod.name.split('(')[0]} bill mein shamil kar diya`);
 }
 
 function updatePosCartQty(productId, delta) {
-    const item = state.cart.find(c => String(c.productId) === String(productId));
+    const item = state.cart.find(c => c.productId === productId);
     if (!item) return;
+    const prod = state.products.find(p => p.id === productId);
+
+    if (delta > 0 && prod && item.qty + delta > prod.stock) {
+        showToast(`Godown mein sirf ${prod.stock} ${prod.unit} mojood hai!`);
+        return;
+    }
+
     item.qty = +(item.qty + delta).toFixed(1);
-    if (item.qty <= 0) state.cart = state.cart.filter(c => String(c.productId) !== String(productId));
+    if (item.qty <= 0) state.cart = state.cart.filter(c => c.productId !== productId);
+    persistDB();
     renderPosCart();
 }
 
 function clearPosCart() {
     state.cart = [];
+    persistDB();
     renderPosCart();
 }
 
@@ -101,10 +117,10 @@ function getPosTotals() {
 function renderPosCart() {
     const list = document.getElementById('pos-cart-list');
     if (!list) return;
-    document.getElementById('pos-cart-badge').innerText = `${state.cart.length} Items`;
+    document.getElementById('pos-cart-badge').innerText = `${state.cart.length} Cheezein`;
 
     list.innerHTML = state.cart.length === 0
-        ? `<div class="py-8 text-center text-xs text-slate-400">Cart is empty. Tap any product above to add.</div>`
+        ? `<div class="py-8 text-center text-xs text-slate-400">Bill khali hai. Upar se koi bhi cheez chun kar shamil karein.</div>`
         : state.cart.map(item => {
             const step = item.unit === 'KG' ? 0.5 : 1;
             return `
@@ -114,11 +130,11 @@ function renderPosCart() {
                         <p class="text-[11px] text-slate-400">Rs. ${item.price} / ${item.unit}</p>
                     </div>
                     <div class="flex items-center gap-1.5 bg-white border border-slate-200/80 rounded-lg p-0.5 shrink-0">
-                        <button onclick="updatePosCartQty('${item.productId}', -${step})" class="w-6 h-6 rounded flex items-center justify-center text-slate-600 active:bg-slate-100">
+                        <button onclick="updatePosCartQty(${item.productId}, -${step})" class="w-6 h-6 rounded flex items-center justify-center text-slate-600 active:bg-slate-100">
                             <span class="material-symbols-outlined text-[14px]">remove</span>
                         </button>
                         <span class="text-xs font-bold w-8 text-center">${item.qty}</span>
-                        <button onclick="updatePosCartQty('${item.productId}', ${step})" class="w-6 h-6 rounded flex items-center justify-center text-slate-900 active:bg-slate-100">
+                        <button onclick="updatePosCartQty(${item.productId}, ${step})" class="w-6 h-6 rounded flex items-center justify-center text-slate-900 active:bg-slate-100">
                             <span class="material-symbols-outlined text-[14px]">add</span>
                         </button>
                     </div>
@@ -147,10 +163,10 @@ function setPosPaymentMode(mode) {
 
     const splitBox = document.getElementById('pos-split-box');
     if (mode === 'split') {
-        splitBox?.classList.remove('hidden');
+        splitBox.classList.remove('hidden');
         if (state.posCustomerMode === 'walkin') setPosCustomerMode('khata');
     } else {
-        splitBox?.classList.add('hidden');
+        splitBox.classList.add('hidden');
         if (mode === 'udhaar' && state.posCustomerMode === 'walkin') setPosCustomerMode('khata');
     }
     updatePosContextBanner();
@@ -160,107 +176,71 @@ function updatePosContextBanner() {
     const banner = document.getElementById('pos-context-banner');
     if (!banner) return;
     const { net } = getPosTotals();
-    const cust = state.customers.find(c => String(c.id) === String(state.posCustomerId)) || state.customers[0];
+    const cust = state.customers.find(c => c.id === state.posCustomerId) || state.customers[0];
 
     if (state.posPaymentMode === 'cash') {
         banner.innerHTML = `<span class="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>
-            <span>Rs. ${net.toLocaleString()} will be added to Cash Sales.</span>`;
+            <span>Rs. ${net.toLocaleString()} aaj ki Naqad Bikri mein darj hoga.</span>`;
     } else if (state.posPaymentMode === 'udhaar') {
-        const newBal = (cust?.balance || 0) + net;
+        const newBal = (cust ? cust.balance : 0) + net;
         banner.innerHTML = `<span class="material-symbols-outlined text-[16px] text-red-500">info</span>
-            <span><strong>${cust?.name || 'Customer'}</strong> new Khata balance: <strong class="text-red-600">Rs. ${newBal.toLocaleString()}</strong></span>`;
+            <span><strong>${cust ? cust.name : 'Grahak'}</strong> ka naya khata baqiya: <strong class="text-red-600">Rs. ${newBal.toLocaleString()}</strong></span>`;
     } else {
         const cashPaid   = parseFloat(document.getElementById('pos-split-cash')?.value) || 0;
         const udhaarPart = Math.max(0, net - cashPaid);
-        const splitUdhaarEl = document.getElementById('pos-split-udhaar');
-        if (splitUdhaarEl) splitUdhaarEl.innerText = `Rs. ${udhaarPart.toLocaleString()}`;
-        const newBal = (cust?.balance || 0) + udhaarPart;
+        const splitEl = document.getElementById('pos-split-udhaar');
+        if (splitEl) splitEl.innerText = `Rs. ${udhaarPart.toLocaleString()}`;
+        const newBal = (cust ? cust.balance : 0) + udhaarPart;
         banner.innerHTML = `<span class="material-symbols-outlined text-[16px] text-amber-600">call_split</span>
-            <span>Rs. ${cashPaid} Cash + Rs. ${udhaarPart} to <strong>${cust?.name || 'Customer'}</strong> (New Bal: Rs. ${newBal.toLocaleString()})</span>`;
+            <span>Rs. ${cashPaid} Naqad + Rs. ${udhaarPart} Udhaar baam <strong>${cust ? cust.name : 'Grahak'}</strong> (Naya Baqiya: Rs. ${newBal.toLocaleString()})</span>`;
     }
 }
 
-async function completePosSale() {
-    if (state.cart.length === 0) return showToast('Please add items to the bill first');
+function completePosSale() {
+    if (state.cart.length === 0) return showToast('Pehle bill mein cheezein shamil karein');
     const { net }  = getPosTotals();
-    const cust     = state.customers.find(c => String(c.id) === String(state.posCustomerId)) || state.customers[0];
+    const cust     = state.customers.find(c => c.id === state.posCustomerId) || state.customers[0];
     const itemSum  = state.cart.map(i => `${i.qty}x ${i.name.split('(')[0].trim()}`).join(', ');
 
-    // 1. Prepare backend payload with integer paisa & integer base units
-    const saleId = crypto.randomUUID();
-    const saleLines = state.cart.map(item => ({
-        productId: item.productId,
-        quantityBase: Math.max(1, Math.round(item.qty)),
-        unitPricePaisa: Math.round(item.price * 100),
-        totalPaisa: Math.round(item.price * item.qty * 100),
-        productName: item.name
-    }));
-
-    const isUdhaar = state.posPaymentMode === 'udhaar';
-    const opType = isUdhaar ? 'SALE_UDHAAR' : 'SALE_CASH';
-    const payload = {
-        id: saleId,
-        customerId: isUdhaar ? cust?.id : null,
-        lines: saleLines,
-        totalPaisa: Math.round(net * 100),
-        paymentMethod: isUdhaar ? 'UDHAAR' : 'CASH'
-    };
-
-    // 2. Dispatch sync operation if API is connected
-    if (typeof api !== 'undefined') {
-        const result = await api.syncOperation(opType, payload);
-
-        if (!result.ok) {
-            // Check for negative stock rule
-            if (result.data?.code === 'NEGATIVE_STOCK') {
-                showToast(result.data.reason || 'Chawal stock mein sirf 1 kg hai. Pehle maal aya record karein?');
-                return;
-            }
-            if (result.data?.code) {
-                showToast(`Sync Rejected: ${result.data.reason || result.data.code}`);
-                return;
-            }
-        }
-    }
-
-    // 3. Update local state
+    // Godown se maal kam karein aur Database mein update karein
     state.cart.forEach(item => {
-        const prod = state.products.find(p => String(p.id) === String(item.productId));
+        const prod = state.products.find(p => p.id === item.productId);
         if (prod) prod.stock = Math.max(0, +(prod.stock - item.qty).toFixed(1));
     });
 
     if (state.posPaymentMode === 'cash') {
         state.cashSalesToday += net;
-        state.transactions.unshift({ id: Date.now(), title: itemSum, subtitle: 'POS Cash Sale • Synced to DB', amount: net, type: 'sale' });
+        state.transactions.unshift({ id: Date.now(), title: itemSum, subtitle: 'POS Naqad Bikri • Abhi abhi', amount: net, type: 'sale' });
     } else if (state.posPaymentMode === 'udhaar') {
         state.nayaUdhaarToday += net;
         if (cust) cust.balance += net;
-        state.transactions.unshift({ id: Date.now(), title: `${cust?.name || 'Customer'} — ${itemSum}`, subtitle: 'POS Udhaar Bill • Synced to DB', amount: net, type: 'udhaar' });
+        state.transactions.unshift({ id: Date.now(), title: `${cust.name} — ${itemSum}`, subtitle: 'POS Udhaar Parchi • Abhi abhi', amount: net, type: 'udhaar' });
+    } else {
+        const cashPaid   = Math.min(net, parseFloat(document.getElementById('pos-split-cash')?.value) || 0);
+        const udhaarPart = Math.max(0, net - cashPaid);
+        state.cashSalesToday  += cashPaid;
+        state.nayaUdhaarToday += udhaarPart;
+        if (cust) cust.balance += udhaarPart;
+        state.transactions.unshift({ id: Date.now(), title: `${cust.name} (Adha Naqad, Adha Udhaar)`, subtitle: `Rs.${cashPaid} Naqad + Rs.${udhaarPart} Udhaar`, amount: net, type: 'udhaar' });
     }
 
-    // Refresh authoritative data from backend
-    if (typeof api !== 'undefined') {
-        await api.loadStock();
-        await api.loadBalances();
-    }
-
-    // Show receipt
+    // Parchi modal dikhayein
+    const payModeLabel = state.posPaymentMode === 'cash' ? 'Naqad Cash' : (state.posPaymentMode === 'udhaar' ? 'Udhaar Khata' : 'Adha Naqad / Udhaar');
     document.getElementById('receipt-body').innerHTML = `
-        <div class="flex justify-between py-1"><span class="text-slate-400">Customer:</span>
-            <span class="font-semibold text-slate-900">${state.posCustomerMode === 'walkin' ? 'Walk-in Cash' : cust?.name}</span></div>
-        <div class="flex justify-between py-1"><span class="text-slate-400">Items:</span>
-            <span class="font-medium text-slate-800">${state.cart.length} Products</span></div>
-        <div class="flex justify-between py-1"><span class="text-slate-400">Payment Mode:</span>
-            <span class="font-semibold uppercase text-slate-900">${state.posPaymentMode}</span></div>
+        <div class="flex justify-between py-1"><span class="text-slate-400">Grahak:</span>
+            <span class="font-semibold text-slate-900">${state.posCustomerMode === 'walkin' ? 'Aam Grahak (Naqad)' : cust.name}</span></div>
+        <div class="flex justify-between py-1"><span class="text-slate-400">Kul Cheezein:</span>
+            <span class="font-medium text-slate-800">${state.cart.length} Aqsaam</span></div>
+        <div class="flex justify-between py-1"><span class="text-slate-400">Adaigi Ka Tareeqa:</span>
+            <span class="font-semibold uppercase text-slate-900">${payModeLabel}</span></div>
         <div class="flex justify-between pt-2 border-t border-slate-200 text-sm font-bold text-slate-900">
-            <span>Net Total:</span><span>Rs. ${net.toLocaleString()}</span></div>
+            <span>Kul Raqam:</span><span>Rs. ${net.toLocaleString()}</span></div>
     `;
     document.getElementById('modal-receipt').classList.remove('hidden');
     document.getElementById('modal-receipt').classList.add('flex');
 
     state.cart = [];
-    const discountEl = document.getElementById('pos-discount');
-    if (discountEl) discountEl.value = 0;
+    document.getElementById('pos-discount').value = 0;
+    persistDB(); // Mahfooz karein
     renderAll();
-    showToast('Sale saved and synced with PostgreSQL!');
 }
